@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="color_question">#D2E186</color>
+    <color name="color_answer">#FAD4B9</color>
+    <color name="background_activity">#F2EBE5</color>
+    <color name="button_forward">#DE6A8321</color>
+    <color name="button_back">#FB8159</color>
+    <color name="button_continue">#DE6A8321</color>
+    <color name="app_title_background">#DE6A8321</color>
+    <color name="card_default">#DEE6F6B6</color>
+
+    <color name="white">#FEFEFE</color>
+    <color name="text_primary">#474a51</color>
+</resources>

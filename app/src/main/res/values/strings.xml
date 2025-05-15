@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">EduCards</string>
+    <string name="open_nav">Открыть меню</string>
+    <string name="close_nav">Закрыть меню</string>
+    <string name="new_card">Новая карточка</string>
+    <string name="btn_add">Добавить</string>
+    <string name="btn_cancel">Отмена</string>
+    <string name="fill_all_fields">Заполните все поля</string>
+    <string name="edit_card">Редактировать карточку</string>
+    <string name="btn_save">Сохранить</string>
+    <string name="no_cards">Нет доступных карточек</string>
+    <string name="card_count">%1$d/%2$d</string>
+    <string name="back_to_main">На главный экран</string>
+    <string name="lectures_list_description">Список лекционных материалов</string>
+    <string name="back_button_desc">Назад</string>
+    <string name="lectures">Лекции</string>
+    <string name="file_icon_desc">Иконка файла</string>
+</resources>

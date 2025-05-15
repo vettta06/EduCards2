@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_activity">
+
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="39dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="start|center_vertical"
+            android:text="Лекции"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            android:paddingStart="8dp"/>
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/lecturesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="623dp"
+        android:layout_above="@+id/btnBack"
+        android:layout_below="@id/topBar"
+        android:layout_marginTop="23dp"
+        android:contentDescription="@string/lectures_list_description"
+        android:padding="8dp"
+        tools:ignore="NotSibling"
+        tools:listitem="@layout/item_lecture_file" />
+
+</RelativeLayout>
