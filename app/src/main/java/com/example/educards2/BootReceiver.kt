@@ -16,7 +16,7 @@ class BootReceiver : BroadcastReceiver() {
                     val db = AppDatabase.getDatabase(context)
                     val cards = db.cardDao().getAllCardsSync()
                     cards.forEach { card ->
-                        if (card.nextReviewDate > System.currentTimeMillis()) {
+                        if (card.nextReview > System.currentTimeMillis()) {
                             card.scheduleNotification(context)
                         }
                     }

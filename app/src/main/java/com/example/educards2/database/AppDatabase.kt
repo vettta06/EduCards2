@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import android.util.Log
 import androidx.room.Database
+import com.example.educards2.R
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.Dispatchers
@@ -12,12 +13,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Card::class, Stats::class],
-    version = 7
+    entities = [Card::class, Stats::class, Deck::class],
+    version = 8
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
     abstract fun statsDao(): StatsDao
+    abstract fun deckDao(): DeckDao
 
     companion object {
         @Volatile
@@ -73,8 +75,8 @@ abstract class AppDatabase : RoomDatabase() {
                         eFactor REAL NOT NULL DEFAULT 2.5,
                         nextReviewDate INTEGER NOT NULL,
                         currentInterval INTEGER NOT NULL DEFAULT 0,
-                        isBuiltIn INTEGER NOT NULL DEFAULT 0,  // Добавлено
-                        isArchived INTEGER NOT NULL DEFAULT 0 /
+                        isBuiltIn INTEGER NOT NULL DEFAULT 0,  
+                        isArchived INTEGER NOT NULL DEFAULT 0 
                     )
                 """)
 
@@ -97,6 +99,25 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS decks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        isBuiltIn INTEGER NOT NULL DEFAULT 0,
+                        iconResId INTEGER NOT NULL DEFAULT 0,
+                        createdDate INTEGER NOT NULL
+                    )
+                    """
+                )
+                database.execSQL(
+                    "ALTER TABLE cards ADD COLUMN deckId INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -113,311 +134,59 @@ abstract class AppDatabase : RoomDatabase() {
                             }
                         }
                     })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
+
         private fun getDefaultCards(context: Context): List<Card> {
+            val linearAlgebraDeck = Deck(
+                name = "Линейная алгебра",
+                description = "Основы линейной алгебры",
+                isBuiltIn = true,
+                iconResId = R.drawable.ic_math
+            )
+
+            GlobalScope.launch(Dispatchers.IO) {
+                INSTANCE?.deckDao()?.insert(linearAlgebraDeck)
+            }
+
             return listOf(
                 Card(
-                    question = "Что такое вектор?",
-                    answer = "Направленный отрезок, характеризующийся величиной и направлением",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
+                    deckId = 1,
+                    question = "Что такое ранг матрицы?",
+                    answer = "Максимальное число линейно независимых строк или столбцов",
+                    isBuiltIn = true
                 ),
-                Card(
-                    question = "Какие бывают виды матриц?",
-                    answer = "Квадратные, прямоугольные, диагональные, единичные, нулевые",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое определитель матрицы?",
-                    answer = "Скалярная величина, вычисляемая для квадратных матриц",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как найти обратную матрицу?",
-                    answer = "Через алгебраические дополнения или методом Гаусса",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое линейная зависимость векторов?",
-                    answer = "Когда один вектор можно выразить через другие",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как умножить матрицы?",
-                    answer = "Строка на столбец, суммируя произведения элементов",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое транспонированная матрица?",
-                    answer = "Матрица с заменой строк на столбцы",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Какие свойства у умножения матриц?",
-                    answer = "Ассоциативность, дистрибутивность, некоммутативность",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как вычислить след матрицы?",
-                    answer = "Сумма элементов главной диагонали",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое блочная матрица?",
-                    answer = "Матрица, разделённая на подматрицы-блоки",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое СЛАУ?",
-                    answer = "Система линейных алгебраических уравнений",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Какие методы решения СЛАУ?",
-                    answer = "Крамера, Гаусса, матричный, итерационные",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Когда СЛАУ имеет решение?",
-                    answer = "Когда ранг матрицы равен рангу расширенной матрицы",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое фундаментальная система решений?",
-                    answer = "Базис пространства решений однородной СЛАУ",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как определить совместность системы?",
-                    answer = "По теореме Кронекера-Капелли",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что называется однородной СЛАУ?",
-                    answer = "Система вида Ax = 0, где A - матрица коэффициентов, 0 - нулевой вектор",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как связаны размерность пространства решений и ранг матрицы?",
-                    answer = "n - r, где n - число переменных, r - ранг матрицы",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое базисный минор матрицы?",
-                    answer = "Любой отличный от нуля минор максимального порядка",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "В чем суть метода Гаусса?",
-                    answer = "Приведение системы к ступенчатому виду с помощью элементарных преобразований",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что характеризует определитель матрицы в методе Крамера?",
-                    answer = "Определитель основной матрицы системы",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Формула скалярного произведения в ортонормированном базисе",
-                    answer = "(x,y) = x₁y₁ + x₂y₂ + ... + xₙyₙ",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Назовите основные типы поверхностей второго порядка",
-                    answer = "Эллипсоид, гиперболоиды, параболоиды, конус, цилиндры",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как определить тип поверхности по уравнению?",
-                    answer = "Анализ коэффициентов и приведение к канонической форме",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как привести уравнение кривой к каноническому виду?",
-                    answer = "Методом выделения полных квадратов и поворотом осей",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое аффинная система координат?",
-                    answer = "Задание точки начала отсчета и базиса векторного пространства",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое ортонормированный базис?",
-                    answer = "Базис из попарно ортогональных векторов единичной длины",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Дайте определение евклидова пространства",
-                    answer = "Вещественное векторное пространство с заданным скалярным произведением",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Как привести квадратичную форму к каноническому виду?",
-                    answer = "Методом Лагранжа или ортогональным преобразованием",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                ),
-                Card(
-                    question = "Что такое квадратичная форма?",
-                    answer = "Однородный многочлен второй степени от n переменных",
-                    nextReviewDate = System.currentTimeMillis(),
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    isBuiltIn = true,
-                    isArchived = false
-                )
-            ).map {
-                it.copy(
-                    rating = 0,
-                    eFactor = 2.5,
-                    currentInterval = 0,
-                    nextReviewDate = System.currentTimeMillis()
-                )
+            )
+        }
+        private fun initializeBuiltInDecks(db: AppDatabase, context: Context) {
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    val decks = db.deckDao().getAllBuiltInDecks()
+
+                    if (decks.isEmpty()) {
+                        val builtInDecks = listOf(
+                            Deck(
+                                name = "Математика",
+                                description = "Основные математические понятия",
+                                isBuiltIn = true,
+                                iconResId = R.drawable.ic_math
+                            ),
+                            Deck(
+                                name = "Программирование",
+                                description = "Основы программирования",
+                                isBuiltIn = true,
+                                iconResId = R.drawable.ic_code
+                            )
+                        )
+                        builtInDecks.forEach { db.deckDao().insert(it) }
+                    }
+                } catch (e: Exception) {
+                    Log.e("AppDatabase", "Error initializing decks", e)
+                }
             }
         }
     }

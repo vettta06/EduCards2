@@ -1,13 +1,11 @@
 package com.example.educards2
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.educards2.BuiltInCardsActivity
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.Card
 import com.example.educards2.database.Stats
@@ -97,10 +95,11 @@ class UserCardsActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
                 val card = Card(
+                    deckId = 0,
                     question = question,
                     answer = answer,
                     eFactor = 2.5,
-                    nextReviewDate = System.currentTimeMillis(),
+                    nextReview = System.currentTimeMillis(),
                     currentInterval = 0,
                     isBuiltIn = false,
                     isArchived = false

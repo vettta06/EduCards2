@@ -4,12 +4,15 @@ import android.app.AlertDialog
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.educards2.database.Card
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import com.example.educards2.database.AppDatabase
+import com.example.educards2.database.Deck
 import com.example.educards2.database.Stats
 import com.example.educards2.databinding.ActivityBuiltInCardsBinding
 import kotlinx.coroutines.Dispatchers
@@ -21,10 +24,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
 class BuiltInCardsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBuiltInCardsBinding
-
+    private lateinit var deckAdapter: DeckAdapter
+    private var currentDeck: Deck? = null
     private var currentPosition = 0
     private var showingQuestion = true
     private var ratingJob: Job? = null
@@ -36,12 +41,27 @@ class BuiltInCardsActivity : AppCompatActivity() {
         binding = ActivityBuiltInCardsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         db = AppDatabase.getDatabase(this)
-        loadCards()
+        loadDecks()
         setupClickListeners()
+        setupDecksRecyclerView()
         requestNotificationPermission()
 
     }
-    private fun loadCards() {
+    private fun setupDecksRecyclerView() {
+        deckAdapter = DeckAdapter { deck ->
+            currentDeck = deck
+            loadCardsForDeck(deck.id)
+            binding.decksRecyclerView.visibility = View.GONE
+            binding.cardsContainer.visibility = View.VISIBLE
+        }
+
+        binding.decksRecyclerView.apply {
+            layoutManager = GridLayoutManager(this@BuiltInCardsActivity, 2)
+            adapter = deckAdapter
+            visibility = View.VISIBLE
+        }
+    }
+    /*private fun loadCards() {
         lifecycleScope.launch {
             db.cardDao().getAllCards().collect { allCards ->
                 cards = allCards
@@ -60,14 +80,53 @@ class BuiltInCardsActivity : AppCompatActivity() {
                 }
             }
         }
+    }*/
+    private fun loadDecks() {
+        lifecycleScope.launch {
+            try {
+                val decks = db.deckDao().getAllBuiltInDecks()
+                deckAdapter.submitList(decks)
+            } catch (e: Exception) {
+                Log.e("BuiltInCardsActivity", "Error loading decks", e)
+            }
+        }
+    }
+
+    private fun loadCardsForDeck(deckId: Long) {
+        lifecycleScope.launch {
+            // Use the new query that filters due cards directly in the database
+            db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
+                this@BuiltInCardsActivity.cards = loadedCards
+
+                currentPosition = when {
+                    cards.isEmpty() -> -1
+                    currentPosition >= cards.size -> cards.size - 1
+                    else -> currentPosition.coerceIn(0, cards.size - 1)
+                }
+
+                withContext(Dispatchers.Main) {
+                    setupClickListeners()
+                    requestNotificationPermission()
+                    updateCardDisplay()
+                }
+            }
+        }
     }
     private fun setupClickListeners() {
         binding.apply {
             btnPrev.setOnClickListener { showPreviousCard() }
             btnNext.setOnClickListener { showNextCard() }
             cardView.setOnClickListener { flipCard() }
-            btnBack.setOnClickListener { finish() }
             btnArchive.setOnClickListener { archiveCurrentCard() }
+            binding.btnBack.setOnClickListener {
+                if (currentDeck != null) {
+                    currentDeck = null
+                    binding.decksRecyclerView.visibility = View.VISIBLE
+                    binding.cardsContainer.visibility = View.GONE
+                } else {
+                    finish()
+                }
+            }
         }
     }
 
@@ -191,7 +250,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
-                            loadCards()
+                            loadDecks()
                         }
                         showNextCard()
                         binding.cardView.alpha = 1f
@@ -247,16 +306,19 @@ class BuiltInCardsActivity : AppCompatActivity() {
     }
     private fun saveCardSolved() {
         val dao = AppDatabase.getDatabase(this).statsDao()
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val today = System.currentTimeMillis()  // Используем timestamp вместо Date
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val existing = dao.getStatsByDate(today)
+            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                .format(Date(today))  // Конвертируем в строку только для отображения
+
+            val existing = dao.getStatsByDate(dateStr)
             if (existing != null) {
                 dao.insert(existing.copy(cardsSolved = existing.cardsSolved + 1))
-                Log.d("Stats", "Updated stats for date $today: ${existing.cardsSolved + 1} cards solved")
+                Log.d("Stats", "Updated stats for date $dateStr: ${existing.cardsSolved + 1} cards solved")
             } else {
-                dao.insert(Stats(date = today, cardsSolved = 1))
-                Log.d("Stats", "Inserted new stats for date $today: 1 card solved")
+                dao.insert(Stats(date = dateStr, cardsSolved = 1))
+                Log.d("Stats", "Inserted new stats for date $dateStr: 1 card solved")
             }
         }
     }
