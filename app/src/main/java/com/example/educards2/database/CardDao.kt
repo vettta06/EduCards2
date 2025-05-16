@@ -41,13 +41,11 @@ interface CardDao {
     @Query("SELECT COUNT(*) FROM cards WHERE deckId = :deckId AND isArchived = 0")
     suspend fun getTotalCardsInDeck(deckId: Long): Int
 
-    // Keep only one version of getDueCardsCount using Long timestamp
     @Query("SELECT COUNT(*) FROM cards WHERE deckId = :deckId AND nextReview <= :nowTimestamp")
     suspend fun getDueCardsCount(deckId: Long, nowTimestamp: Long = System.currentTimeMillis()): Int
 
     @Query("SELECT * FROM cards WHERE deckId = :deckId")
     fun getCardsByDeck(deckId: Long): Flow<List<Card>>
-
 
     @Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 AND (nextReview <= :currentTime OR nextReview IS NULL)")
     fun getDueCardsByDeck(deckId: Long, currentTime: Long = System.currentTimeMillis()): Flow<List<Card>>
