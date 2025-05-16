@@ -1,18 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/decksRecyclerView"
+    <!-- Добавляем кнопку назад в список колод -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp"
-        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-        app:spanCount="2"
-        tools:listitem="@layout/item_deck"/>
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="28dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arrow_back" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:paddingStart="8dp"
+                android:text="Выбор колоды"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/decksRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="2"
+            tools:listitem="@layout/item_deck"/>
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cardsContainer"
@@ -49,6 +82,15 @@
                 android:text="Встроенные карточки"
                 android:textColor="@color/text_primary"
                 android:textSize="22sp" />
+
+            <ImageButton
+                android:id="@+id/btnArchive"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Архивировать"
+                android:src="@drawable/ic_archive" />
         </LinearLayout>
 
         <TextView
@@ -84,15 +126,6 @@
                 android:padding="24dp"
                 android:text="Вопрос карточки"
                 android:textSize="20sp" />
-
-            <ImageButton
-                android:id="@+id/btnArchive"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="end|bottom"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Архивировать"
-                android:src="@drawable/ic_archive" />
         </androidx.cardview.widget.CardView>
 
         <LinearLayout

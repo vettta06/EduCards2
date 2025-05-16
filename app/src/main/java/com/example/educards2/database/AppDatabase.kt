@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Card::class, Stats::class, Deck::class],
-    version = 8
+    version = 1
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
@@ -25,99 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS stats (" +
-                            "date TEXT PRIMARY KEY NOT NULL, " +
-                            "cards_solved INTEGER NOT NULL DEFAULT 0)"
-                )
-            }
-        }
-
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN rating INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN eFactor REAL NOT NULL DEFAULT 2.5"
-                )
-            }
-        }
-
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN nextReviewDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
-                )
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN intervalStep INTEGER NOT NULL DEFAULT 0"
-                )
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN currentInterval INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-        private val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("""
-                    CREATE TABLE new_cards (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        question TEXT NOT NULL,
-                        answer TEXT NOT NULL,
-                        rating INTEGER NOT NULL DEFAULT 0,
-                        eFactor REAL NOT NULL DEFAULT 2.5,
-                        nextReviewDate INTEGER NOT NULL,
-                        currentInterval INTEGER NOT NULL DEFAULT 0,
-                        isBuiltIn INTEGER NOT NULL DEFAULT 0,  
-                        isArchived INTEGER NOT NULL DEFAULT 0 
-                    )
-                """)
-
-                database.execSQL("""
-                    INSERT INTO new_cards 
-                    (id, question, answer, rating, eFactor, nextReviewDate, currentInterval)
-                    SELECT 
-                    id, question, answer, rating, eFactor, nextReviewDate, currentInterval 
-                    FROM cards
-                """)
-
-                database.execSQL("DROP TABLE cards")
-                database.execSQL("ALTER TABLE new_cards RENAME TO cards")
-            }
-        }
-        private val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-        private val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS decks (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        name TEXT NOT NULL,
-                        description TEXT NOT NULL,
-                        isBuiltIn INTEGER NOT NULL DEFAULT 0,
-                        iconResId INTEGER NOT NULL DEFAULT 0,
-                        createdDate INTEGER NOT NULL
-                    )
-                    """
-                )
-                database.execSQL(
-                    "ALTER TABLE cards ADD COLUMN deckId INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -128,29 +35,47 @@ abstract class AppDatabase : RoomDatabase() {
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             GlobalScope.launch(Dispatchers.IO) {
-                                val cards = getDefaultCards(context)
+                                val cards = getDefaultCards()
                                 getDatabase(context).cardDao().insertAll(cards)
                                 Log.d("DB", "Добавлено ${cards.size} карточек")
                             }
                         }
                     })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
 
-        private fun getDefaultCards(context: Context): List<Card> {
+        private fun getDefaultCards(): List<Card> {
             val linearAlgebraDeck = Deck(
+                id = 1,
                 name = "Линейная алгебра",
                 description = "Основы линейной алгебры",
-                isBuiltIn = true,
-                iconResId = R.drawable.ic_math
+                isBuiltIn = true
+            )
+
+            val mathAnalysisDeck = Deck(
+                id = 2,
+                name = "Математический анализ",
+                description = "Основы матанализа",
+                isBuiltIn = true
+            )
+
+            val oopDeck = Deck(
+                id = 3,
+                name = "ООП",
+                description = "Объектно-ориентированное программирование",
+                isBuiltIn = true
             )
 
             GlobalScope.launch(Dispatchers.IO) {
-                INSTANCE?.deckDao()?.insert(linearAlgebraDeck)
+                INSTANCE?.deckDao()?.apply {
+                    insert(linearAlgebraDeck)
+                    insert(mathAnalysisDeck)
+                    insert(oopDeck)
+                }
             }
 
             return listOf(
@@ -160,34 +85,58 @@ abstract class AppDatabase : RoomDatabase() {
                     answer = "Максимальное число линейно независимых строк или столбцов",
                     isBuiltIn = true
                 ),
-            )
-        }
-        private fun initializeBuiltInDecks(db: AppDatabase, context: Context) {
-            GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    val decks = db.deckDao().getAllBuiltInDecks()
+                Card(
+                    deckId = 1,
+                    question = "Как проверить, что векторы ортогональны?",
+                    answer = "Их скалярное произведение равно нулю",
+                    isBuiltIn = true
+                ),
+                Card(
+                    deckId = 1,
+                    question = "Что означает det(A) = 0?",
+                    answer = "Матрица A вырожденная (не имеет обратной)",
+                    isBuiltIn = true
+                ),
 
-                    if (decks.isEmpty()) {
-                        val builtInDecks = listOf(
-                            Deck(
-                                name = "Математика",
-                                description = "Основные математические понятия",
-                                isBuiltIn = true,
-                                iconResId = R.drawable.ic_math
-                            ),
-                            Deck(
-                                name = "Программирование",
-                                description = "Основы программирования",
-                                isBuiltIn = true,
-                                iconResId = R.drawable.ic_code
-                            )
-                        )
-                        builtInDecks.forEach { db.deckDao().insert(it) }
-                    }
-                } catch (e: Exception) {
-                    Log.e("AppDatabase", "Error initializing decks", e)
-                }
-            }
+                Card(
+                    deckId = 2,
+                    question = "Что такое производная?",
+                    answer = "Скорость изменения функции в точке",
+                    isBuiltIn = true
+                ),
+                Card(
+                    deckId = 2,
+                    question = "Как найти предел функции?",
+                    answer = "Подставить точку, если неопределённость — упростить или использовать правило Лопиталя",
+                    isBuiltIn = true
+                ),
+                Card(
+                    deckId = 2,
+                    question = "Что вычисляет интеграл?",
+                    answer = "Площадь под кривой или первообразную функции",
+                    isBuiltIn = true
+                ),
+
+                // ООП
+                Card(
+                    deckId = 3,
+                    question = "Что такое класс?",
+                    answer = "Шаблон для создания объектов",
+                    isBuiltIn = true
+                ),
+                Card(
+                    deckId = 3,
+                    question = "Что такое объект?",
+                    answer = "Экземпляр класса",
+                    isBuiltIn = true
+                ),
+                Card(
+                    deckId = 3,
+                    question = "Что такое функция?",
+                    answer = "Блок кода, который выполняет действие",
+                    isBuiltIn = true
+                )
+            )
         }
     }
 }
