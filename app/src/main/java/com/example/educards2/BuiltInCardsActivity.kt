@@ -61,26 +61,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             visibility = View.VISIBLE
         }
     }
-    /*private fun loadCards() {
-        lifecycleScope.launch {
-            db.cardDao().getAllCards().collect { allCards ->
-                cards = allCards
-                    .filter { it.isBuiltIn }
-                    .filter { !it.isArchived }
-                    .filter { it.isDue() }
 
-                currentPosition = when {
-                    cards.isEmpty() -> -1
-                    currentPosition >= cards.size -> cards.size - 1
-                    else -> currentPosition.coerceIn(0, cards.size - 1)
-                }
-
-                withContext(Dispatchers.Main) {
-                    updateCardDisplay()
-                }
-            }
-        }
-    }*/
     private fun loadDecks() {
         lifecycleScope.launch {
             try {
@@ -94,7 +75,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
 
     private fun loadCardsForDeck(deckId: Long) {
         lifecycleScope.launch {
-            // Use the new query that filters due cards directly in the database
             db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
                 this@BuiltInCardsActivity.cards = loadedCards
 
@@ -118,6 +98,15 @@ class BuiltInCardsActivity : AppCompatActivity() {
             btnNext.setOnClickListener { showNextCard() }
             cardView.setOnClickListener { flipCard() }
             btnArchive.setOnClickListener { archiveCurrentCard() }
+            binding.btnBackToDecks.setOnClickListener {
+                binding.cardsContainer.visibility = View.GONE
+                binding.decksRecyclerView.visibility = View.VISIBLE
+                currentDeck = null
+                currentPosition = 0
+                showingQuestion = true
+                ratingJob?.cancel()
+                loadDecks()
+            }
             binding.btnBack.setOnClickListener {
                 if (currentDeck != null) {
                     currentDeck = null
@@ -306,12 +295,11 @@ class BuiltInCardsActivity : AppCompatActivity() {
     }
     private fun saveCardSolved() {
         val dao = AppDatabase.getDatabase(this).statsDao()
-        val today = System.currentTimeMillis()  // Используем timestamp вместо Date
+        val today = System.currentTimeMillis()
 
         lifecycleScope.launch(Dispatchers.IO) {
             val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(Date(today))  // Конвертируем в строку только для отображения
-
+                .format(Date(today))
             val existing = dao.getStatsByDate(dateStr)
             if (existing != null) {
                 dao.insert(existing.copy(cardsSolved = existing.cardsSolved + 1))

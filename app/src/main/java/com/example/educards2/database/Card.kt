@@ -36,17 +36,17 @@ data class Card(
 
     fun updateIntervals(q: Int, context: Context) {
         val newInterval = when (q) {
-            5 -> 1L * 24 * 60 * 60 * 1000
-            4 -> 12L * 60 * 60 * 1000
-            3 -> 8L * 60 * 60 * 1000
-            2 -> 4L * 60 * 60 * 1000
-            1 -> 2L * 60 * 60 * 1000
             0 -> 15L * 60 * 1000
+            1 -> 1L * 60 * 60 * 1000
+            2 -> 2L * 60 * 60 * 1000
+            3 -> 4L * 60 * 60 * 1000
+            4 -> 12L * 60 * 60 * 1000
+            5 -> 24L * 60 * 60 * 1000
             else -> currentInterval
         }
+
         currentInterval = newInterval
         nextReview = System.currentTimeMillis() + newInterval
-
         scheduleNotification(context)
     }
 

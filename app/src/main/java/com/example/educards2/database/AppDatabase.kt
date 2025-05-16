@@ -5,8 +5,6 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import android.util.Log
 import androidx.room.Database
-import com.example.educards2.R
-import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
