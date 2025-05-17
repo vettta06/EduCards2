@@ -36,6 +36,7 @@ class UserCardsActivity : AppCompatActivity() {
         db = AppDatabase.getDatabase(this)
         setupClickListeners()
         loadCards()
+
         if (savedInstanceState != null) {
             currentPosition = savedInstanceState.getInt("currentPosition")
             showingQuestion = savedInstanceState.getBoolean("showingQuestion")

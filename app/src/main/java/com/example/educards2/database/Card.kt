@@ -9,6 +9,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.educards2.CardNotificationReceiver
+import com.example.educards2.UserCardsActivity
 
 
 @Entity(tableName = "cards")
@@ -58,12 +59,24 @@ data class Card(
             }
         }
 
-        val intent = Intent(context, CardNotificationReceiver::class.java).apply {
+
+         /*val intent = Intent(context, CardNotificationReceiver::class.java).apply {
             putExtra("card_id", id)
             putExtra("card_question", question)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )*/
+        val intent = Intent(context, UserCardsActivity::class.java).apply {
+            putExtra("TARGET_CARD_ID", id)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
             context,
             id.toInt(),
             intent,

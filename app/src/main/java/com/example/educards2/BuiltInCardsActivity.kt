@@ -154,7 +154,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
                 .setPositiveButton("OK") { _, _ ->
                     currentPosition = 0
                     showingQuestion = true
-                    updateCardDisplay()
+                    currentDeck?.let { loadCardsForDeck(it.id) }
                 }
                 .setOnCancelListener {
                     currentPosition = 0
@@ -248,7 +248,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
-                            loadDecks()
+                            currentDeck?.let { loadCardsForDeck(it.id) }
                         }
                         showNextCard()
                         binding.cardView.alpha = 1f
