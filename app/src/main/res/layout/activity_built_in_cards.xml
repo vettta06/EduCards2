@@ -5,13 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Контейнер списка колод -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Верхняя панель списка колод -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="46dp"
@@ -37,7 +35,6 @@
                 android:textSize="22sp" />
         </LinearLayout>
 
-        <!-- Список колод -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/decksRecyclerView"
             android:layout_width="match_parent"
@@ -48,7 +45,6 @@
             tools:listitem="@layout/item_deck"/>
     </LinearLayout>
 
-    <!-- Контейнер карточек -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cardsContainer"
         android:layout_width="match_parent"
@@ -56,7 +52,6 @@
         android:visibility="gone"
         android:background="@color/background_activity">
 
-        <!-- Верхняя панель карточек -->
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
@@ -76,6 +71,7 @@
                 android:src="@drawable/ic_arrow_back" />
 
             <TextView
+                android:id="@+id/tvDeckTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -86,7 +82,6 @@
                 android:textSize="22sp" />
         </LinearLayout>
 
-        <!-- Счетчик карточек -->
         <TextView
             android:id="@+id/tvCardCount"
             android:layout_width="0dp"
@@ -116,7 +111,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <!-- Кнопка архивирования -->
                 <ImageButton
                     android:id="@+id/btnArchive"
                     android:layout_width="48dp"
@@ -128,7 +122,6 @@
                     android:contentDescription="Архивировать"
                     android:src="@drawable/ic_archive" />
 
-                <!-- Контент карточки -->
                 <TextView
                     android:id="@+id/tv_card_content"
                     android:layout_width="match_parent"
@@ -140,7 +133,6 @@
             </RelativeLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Кнопки навигации -->
         <LinearLayout
             android:id="@+id/buttonsLayout"
             android:layout_width="match_parent"
