@@ -5,11 +5,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.educards2.CardNotificationReceiver
 import com.example.educards2.UserCardsActivity
+import java.util.Date
 
 
 @Entity(tableName = "cards")
@@ -52,43 +54,42 @@ data class Card(
     }
 
     fun scheduleNotification(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = context.getSystemService(AlarmManager::class.java)
-            if (!alarmManager.canScheduleExactAlarms()) {
-                return
-            }
+        if (nextReview <= System.currentTimeMillis()) {
+            Log.e("Notification", "Invalid notification time for card $id")
+            return
         }
 
-
-         /*val intent = Intent(context, CardNotificationReceiver::class.java).apply {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, CardNotificationReceiver::class.java).apply {
             putExtra("card_id", id)
             putExtra("card_question", question)
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )*/
-        val intent = Intent(context, UserCardsActivity::class.java).apply {
-            putExtra("TARGET_CARD_ID", id)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
         }
 
-        val pendingIntent = PendingIntent.getActivity(
+        val pendingIntent = PendingIntent.getBroadcast(
             context,
-            id.toInt(),
+            id.hashCode(),
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            flags
         )
 
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            nextReview,
-            pendingIntent
-        )
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextReview,
+                pendingIntent
+            )
+            Log.d("Notification", "Scheduled notification for card $id at ${Date(nextReview)}")
+        } catch (e: SecurityException) {
+            Log.e("Notification", "Permission error: ${e.message}")
+        } catch (e: Exception) {
+            Log.e("Notification", "Scheduling error: ${e.message}")
+        }
     }
     fun isDue(): Boolean = System.currentTimeMillis() >= nextReview
 

@@ -3,6 +3,7 @@ package com.example.educards2
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.example.educards2.database.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,6 @@ class BootReceiver : BroadcastReceiver() {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
                 }
             }
         }
