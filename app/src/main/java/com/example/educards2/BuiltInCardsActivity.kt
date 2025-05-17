@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.educards2.database.Card
@@ -35,12 +36,14 @@ class BuiltInCardsActivity : AppCompatActivity() {
     private var ratingJob: Job? = null
     private lateinit var db: AppDatabase
     private var cards = emptyList<Card>()
+    private lateinit var tvDeckTitle: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBuiltInCardsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         db = AppDatabase.getDatabase(this)
+        tvDeckTitle = findViewById(R.id.tvDeckTitle)
         loadDecks()
         setupClickListeners()
         setupDecksRecyclerView()
@@ -53,6 +56,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             loadCardsForDeck(deck.id)
             binding.decksRecyclerView.visibility = View.GONE
             binding.cardsContainer.visibility = View.VISIBLE
+            tvDeckTitle.text = deck.name
         }
 
         binding.decksRecyclerView.apply {
@@ -78,6 +82,11 @@ class BuiltInCardsActivity : AppCompatActivity() {
             db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
                 this@BuiltInCardsActivity.cards = loadedCards
 
+                currentDeck?.let {
+                    withContext(Dispatchers.Main) {
+                        tvDeckTitle.text = it.name
+                    }
+                }
                 currentPosition = when {
                     cards.isEmpty() -> -1
                     currentPosition >= cards.size -> cards.size - 1
