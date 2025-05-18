@@ -19,5 +19,5 @@ interface DeckDao {
     suspend fun getDeckById(deckId: Long): Deck?
 
     @Query("SELECT * FROM decks WHERE isBuiltIn = 1")
-    suspend fun getAllBuiltInDecks(): List<Deck>
+    fun getAllBuiltInDecks(): Flow<List<Deck>>
 }

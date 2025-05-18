@@ -48,6 +48,32 @@ class BuiltInCardsActivity : AppCompatActivity() {
         setupClickListeners()
         setupDecksRecyclerView()
         requestNotificationPermission()
+        val cardId = intent.getLongExtra("CARD_ID", -1L)
+        val deckId = intent.getLongExtra("DECK_ID", -1L)
+        if (cardId != -1L && deckId != -1L) {
+            lifecycleScope.launch {
+                val deck = withContext(Dispatchers.IO) {
+                    db.deckDao().getDeckById(deckId)
+                }
+                deck?.let {
+                    currentDeck = it
+                    loadCardsForDeck(it.id)
+                    binding.decksRecyclerView.visibility = View.GONE
+                    binding.cardsContainer.visibility = View.VISIBLE
+
+                    val cardsInDeck = withContext(Dispatchers.IO) {
+                        db.cardDao().getCardsByDeckSync(deckId)
+                    }
+                    val position = cardsInDeck.indexOfFirst { card: Card ->
+                        card.id == cardId
+                    }
+                    if (position != -1) {
+                        currentPosition = position
+                        updateCardDisplay()
+                    }
+                }
+            }
+        }
 
     }
     private fun setupDecksRecyclerView() {
@@ -69,10 +95,15 @@ class BuiltInCardsActivity : AppCompatActivity() {
     private fun loadDecks() {
         lifecycleScope.launch {
             try {
-                val decks = db.deckDao().getAllBuiltInDecks()
-                deckAdapter.submitList(decks)
+                db.deckDao().getAllBuiltInDecks()
+                    .collect { decks ->
+                        if (decks.isEmpty()) {
+                            return@collect
+                        }
+                        deckAdapter.submitList(decks)
+                    }
             } catch (e: Exception) {
-                Log.e("BuiltInCardsActivity", "Error loading decks", e)
+               // showError("Ошибка загрузки: ${e.localizedMessage}")
             }
         }
     }
@@ -81,7 +112,9 @@ class BuiltInCardsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
                 this@BuiltInCardsActivity.cards = loadedCards
-
+                if (intent.hasExtra("CARD_ID") && currentPosition == -1 && cards.isNotEmpty()) {
+                    currentPosition = 0
+                }
                 currentDeck?.let {
                     withContext(Dispatchers.Main) {
                         tvDeckTitle.text = it.name

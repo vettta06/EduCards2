@@ -41,6 +41,21 @@ class UserCardsActivity : AppCompatActivity() {
             currentPosition = savedInstanceState.getInt("currentPosition")
             showingQuestion = savedInstanceState.getBoolean("showingQuestion")
         }
+        val cardId = intent.getLongExtra("CARD_ID", -1L)
+        val deckId = intent.getLongExtra("DECK_ID", -1L)
+
+        if (cardId != -1L && deckId != -1L) {
+            lifecycleScope.launch {
+                val cards = withContext(Dispatchers.IO) {
+                    db.cardDao().getCardsByDeckSync(deckId)
+                }
+                val position = cards.indexOfFirst { card: Card ->
+                    card.id == cardId
+                }
+                if (position != -1) {
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

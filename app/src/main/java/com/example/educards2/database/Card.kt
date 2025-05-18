@@ -5,14 +5,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.educards2.CardNotificationReceiver
-import com.example.educards2.UserCardsActivity
-import java.util.Date
-
 
 @Entity(tableName = "cards")
 data class Card(
@@ -54,15 +50,14 @@ data class Card(
     }
 
     fun scheduleNotification(context: Context) {
-        if (nextReview <= System.currentTimeMillis()) {
-            Log.e("Notification", "Invalid notification time for card $id")
-            return
-        }
+        if (nextReview <= System.currentTimeMillis()) return
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, CardNotificationReceiver::class.java).apply {
             putExtra("card_id", id)
+            putExtra("deck_id", deckId)
             putExtra("card_question", question)
+            putExtra("IS_BUILT_IN", isBuiltIn)
         }
 
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -84,12 +79,7 @@ data class Card(
                 nextReview,
                 pendingIntent
             )
-            Log.d("Notification", "Scheduled notification for card $id at ${Date(nextReview)}")
-        } catch (e: SecurityException) {
-            Log.e("Notification", "Permission error: ${e.message}")
-        } catch (e: Exception) {
-            Log.e("Notification", "Scheduling error: ${e.message}")
-        }
+        } catch (_: Exception) {}
     }
     fun isDue(): Boolean = System.currentTimeMillis() >= nextReview
 

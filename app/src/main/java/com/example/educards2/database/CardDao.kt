@@ -7,7 +7,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import java.util.Date
 
 @Dao
 interface CardDao {
@@ -50,6 +49,6 @@ interface CardDao {
     @Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 AND (nextReview <= :currentTime OR nextReview IS NULL)")
     fun getDueCardsByDeck(deckId: Long, currentTime: Long = System.currentTimeMillis()): Flow<List<Card>>
 
-    //@Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 AND dueDate <= :currentTime")
-    //fun getDueCardsByDeckSync(deckId: Long, currentTime: Long = System.currentTimeMillis()): List<Card>
+    @Query("SELECT * FROM cards WHERE deckId = :deckId")
+    suspend fun getCardsByDeckSync(deckId: Long): List<Card>
 }
