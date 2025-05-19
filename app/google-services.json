@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "88619052257",
+    "project_id": "educards2",
+    "storage_bucket": "educards2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:88619052257:android:20a5be44ac5ca2086a9ba0",
+        "android_client_info": {
+          "package_name": "com.example.educards2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8H1zxYyKggnHj0vc1oCLp84RUKKQXILk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

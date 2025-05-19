@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.plugin.compose)
+    alias(libs.plugins.google.services)
     kotlin("kapt")
 }
 
@@ -30,7 +31,7 @@ android {
 
     buildFeatures {
         viewBinding = true
-        compose = true // Исправлен синтаксис
+        compose = true
         dataBinding = true
     }
 
@@ -73,7 +74,8 @@ dependencies {
     implementation("androidx.room:room-runtime:2.7.0")
     implementation("androidx.room:room-ktx:2.7.0")
     kapt("androidx.room:room-compiler:2.7.0")
-
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation(platform(libs.firebase.bom))
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
