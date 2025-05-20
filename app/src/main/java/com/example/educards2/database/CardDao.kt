@@ -32,7 +32,7 @@ interface CardDao {
     suspend fun archiveCard(cardId: Long)
 
     @Query("UPDATE cards SET isArchived = 0 WHERE id = :cardId")
-    suspend fun restoreCard(cardId: Long)  // Changed from Int to Long for consistency
+    suspend fun restoreCard(cardId: Long)
 
     @Query("SELECT * FROM cards WHERE isArchived = 1")
     fun getArchivedCards(): Flow<List<Card>>
