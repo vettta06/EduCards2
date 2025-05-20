@@ -94,20 +94,15 @@ class BuiltInCardsActivity : AppCompatActivity() {
 
     private fun loadDecks() {
         lifecycleScope.launch {
-            try {
-                db.deckDao().getAllBuiltInDecks()
-                    .collect { decks ->
-                        if (decks.isEmpty()) {
-                            return@collect
-                        }
-                        deckAdapter.submitList(decks)
+            db.deckDao().getAllBuiltInDecks()
+                .collect { decks ->
+                    if (decks.isEmpty()) {
+                        return@collect
                     }
-            } catch (e: Exception) {
-               // showError("Ошибка загрузки: ${e.localizedMessage}")
-            }
+                    deckAdapter.submitList(decks)
+                }
         }
     }
-
     private fun loadCardsForDeck(deckId: Long) {
         lifecycleScope.launch {
             db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
@@ -345,10 +340,8 @@ class BuiltInCardsActivity : AppCompatActivity() {
             val existing = dao.getStatsByDate(dateStr)
             if (existing != null) {
                 dao.insert(existing.copy(cardsSolved = existing.cardsSolved + 1))
-                Log.d("Stats", "Updated stats for date $dateStr: ${existing.cardsSolved + 1} cards solved")
-            } else {
+g            } else {
                 dao.insert(Stats(date = dateStr, cardsSolved = 1))
-                Log.d("Stats", "Inserted new stats for date $dateStr: 1 card solved")
             }
         }
     }
