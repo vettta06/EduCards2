@@ -46,9 +46,10 @@ interface CardDao {
     @Query("SELECT * FROM cards WHERE deckId = :deckId")
     fun getCardsByDeck(deckId: Long): Flow<List<Card>>
 
+    @Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 ORDER BY id")
+    suspend fun getCardsByDeckSync(deckId: Long): List<Card>
+
     @Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 AND (nextReview <= :currentTime OR nextReview IS NULL)")
     fun getDueCardsByDeck(deckId: Long, currentTime: Long = System.currentTimeMillis()): Flow<List<Card>>
 
-    @Query("SELECT * FROM cards WHERE deckId = :deckId")
-    suspend fun getCardsByDeckSync(deckId: Long): List<Card>
 }

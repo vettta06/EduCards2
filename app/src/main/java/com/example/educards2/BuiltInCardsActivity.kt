@@ -353,35 +353,52 @@ class BuiltInCardsActivity : AppCompatActivity() {
         }
     }
     private fun archiveCurrentCard() {
-        if (cards.isEmpty() || currentPosition !in cards.indices) return
+        if (cards.isEmpty() || currentPosition !in cards.indices) {
+            Toast.makeText(this, "Нет карточек для архивирования", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val currentCard = cards[currentPosition]
-        val currentDeckId = currentDeck?.id ?: return
+        val currentDeckId = currentDeck?.id ?: run {
+            Toast.makeText(this, "Ошибка: колода не выбрана", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.cardDao().archiveCard(currentCard.id)
-            val updatedCards = db.cardDao().getCardsByDeckSync(currentDeckId)
-
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.cardDao().archiveCard(currentCard.id)
+            }
+            val updatedCards = withContext(Dispatchers.IO) {
+                db.cardDao().getCardsByDeckSync(currentDeckId)
+            }
             withContext(Dispatchers.Main) {
                 cards = updatedCards
-                if (cards.isEmpty()) {
-                    currentPosition = -1
-                    updateCardDisplay()
+
+                currentPosition = when {
+                    updatedCards.isEmpty() -> -1
+                    currentPosition >= updatedCards.size -> updatedCards.size - 1
+                    else -> currentPosition
+                }
+
+                updateCardDisplay()
+
+                if (updatedCards.isEmpty()) {
                     AlertDialog.Builder(this@BuiltInCardsActivity)
                         .setTitle("Колода архивирована")
-                        .setMessage("Все карточки в этой колоде перемещены в архив")
+                        .setMessage("Все карточки перемещены в архив")
                         .setPositiveButton("OK") { _, _ ->
                             binding.cardsContainer.visibility = View.GONE
                             binding.decksRecyclerView.visibility = View.VISIBLE
                             currentDeck = null
+                            currentPosition = 0
+                            loadDecks()
                         }
                         .setCancelable(false)
                         .show()
                 } else {
-                    currentPosition = if (currentPosition >= cards.size) cards.size - 1 else 0
-                    updateCardDisplay()
                     Toast.makeText(
                         this@BuiltInCardsActivity,
-                        "Карточка перемещена в архив",
+                        "Карточка архивирована",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
