@@ -340,7 +340,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             val existing = dao.getStatsByDate(dateStr)
             if (existing != null) {
                 dao.insert(existing.copy(cardsSolved = existing.cardsSolved + 1))
-g            } else {
+            } else {
                 dao.insert(Stats(date = dateStr, cardsSolved = 1))
             }
         }
