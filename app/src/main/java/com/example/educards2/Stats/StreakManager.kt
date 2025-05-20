@@ -12,6 +12,11 @@ class StreakManager(private val context: Context) {
     fun getSharedPreferences(): SharedPreferences {
         return prefs
     }
+
+    fun getCurrentStreak(): Int {
+        return prefs.getInt("current_streak", 0)
+    }
+
     fun updateStreak() {
         val calendar = Calendar.getInstance()
         val today = calendar.timeInMillis

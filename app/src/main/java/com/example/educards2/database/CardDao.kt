@@ -22,6 +22,9 @@ interface CardDao {
     @Delete
     suspend fun delete(card: Card)
 
+    @Query("SELECT COUNT(*) FROM cards")
+    suspend fun getCardsCount(): Int
+
     @Query("SELECT * FROM cards ORDER BY id DESC")
     fun getAllCards(): Flow<List<Card>>
 

@@ -6,6 +6,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.educards2.Stats.StreakManager
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.Card
 import com.example.educards2.database.Stats
@@ -28,12 +29,18 @@ class UserCardsActivity : AppCompatActivity() {
     private var showingQuestion = true
     private var ratingJob: Job? = null
     private var isAnimating = false
+    private lateinit var achievementManager: AchievementManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityUserCardsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         db = AppDatabase.getDatabase(this)
+        achievementManager = AchievementManager(
+            this,
+            db.cardDao(),
+            StreakManager(applicationContext)
+        )
         setupClickListeners()
         loadCards()
 
@@ -74,7 +81,6 @@ class UserCardsActivity : AppCompatActivity() {
             btnBack.setOnClickListener { finish() }
             tvCardContent.setOnClickListener { flipCard() }
             btnArchive.setOnClickListener { archiveCurrentCard() }
-
         }
     }
 
@@ -90,7 +96,6 @@ class UserCardsActivity : AppCompatActivity() {
                     currentPosition >= cards.size -> cards.size - 1
                     else -> currentPosition.coerceIn(0, cards.size - 1)
                 }
-                //currentPosition = if (cards.isNotEmpty()) 0 else -1
                 updateCardDisplay()
             }
         }
@@ -122,6 +127,14 @@ class UserCardsActivity : AppCompatActivity() {
                 )
                 lifecycleScope.launch(Dispatchers.IO) {
                     db.cardDao().insert(card)
+                    val count = db.cardDao().getCardsCount()
+                    if (count == 0) {
+                        withContext(Dispatchers.Main) {
+                            achievementManager.unlockAchievement("Новичок")
+                            (this@UserCardsActivity as? MainActivity)?.updateAchievementsUI()
+                        }
+                    }
+
                     loadCards()
                 }
             }

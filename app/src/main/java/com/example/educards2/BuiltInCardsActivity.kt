@@ -12,6 +12,7 @@ import com.example.educards2.database.Card
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.educards2.Stats.StreakManager
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.Deck
 import com.example.educards2.database.Stats
@@ -37,6 +38,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private var cards = emptyList<Card>()
     private lateinit var tvDeckTitle: TextView
+    private lateinit var achievementManager: AchievementManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +46,11 @@ class BuiltInCardsActivity : AppCompatActivity() {
         setContentView(binding.root)
         db = AppDatabase.getDatabase(this)
         tvDeckTitle = findViewById(R.id.tvDeckTitle)
+        achievementManager = AchievementManager(
+            this,
+            db.cardDao(),
+            StreakManager(applicationContext)
+        )
         loadDecks()
         setupClickListeners()
         setupDecksRecyclerView()
@@ -277,6 +284,8 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
                             currentDeck?.let { loadCardsForDeck(it.id) }
+
+                            achievementManager.checkAllAchievements()
                         }
                         showNextCard()
                         binding.cardView.alpha = 1f
@@ -295,6 +304,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             }
             .show()
     }
+
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
