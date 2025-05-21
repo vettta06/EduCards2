@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.educards2.Stats.StreakManager
@@ -86,12 +85,13 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         checkVarietyInRatings(allCards)
         checkRepetitionMaster(allCards)
         checkAllAchievementsUnlocked()
+        loadAchievementStatuses()
+
     }
 
-    private fun loadAchievementStatuses() {
-        // Get current status
-        for (achievement in allAchievements) {
-            achievement.unlocked = isAchievementUnlocked(achievement.title)
+    fun loadAchievementStatuses() {
+        allAchievements = allAchievements.map {
+            it.copy(unlocked = isAchievementUnlocked(it.title))
         }
     }
     private fun isAchievementUnlocked(title: String): Boolean {
@@ -153,10 +153,14 @@ class AchievementManager(private val context: Context, private val cardDao: Card
             }
         }
     }
+
     fun unlockAchievement(title: String) {
         if (!isAchievementUnlocked(title)) {
             prefs.edit().putBoolean("achievement_$title", true).apply()
-            allAchievements.find { it.title == title }?.unlocked = true
+            allAchievements = allAchievements.map {
+                if (it.title == title) it.copy(unlocked = true)
+                else it
+            }
             CoroutineScope(Dispatchers.Main).launch {
                 showAchievementToast(title)
             }

@@ -99,6 +99,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateAchievementsUI() {
         val gridLayout = binding.achievementsGrid
         gridLayout.removeAllViews()
+        achievementManager.loadAchievementStatuses()
+
         achievementManager.allAchievements.forEach { achievement ->
 
             val achievementView = LayoutInflater.from(this)
