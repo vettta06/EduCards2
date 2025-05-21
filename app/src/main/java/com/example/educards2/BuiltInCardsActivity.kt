@@ -112,6 +112,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
         }
     }
     private fun loadCardsForDeck(deckId: Long) {
+
         lifecycleScope.launch {
             db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
                 this@BuiltInCardsActivity.cards = loadedCards
@@ -175,18 +176,10 @@ class BuiltInCardsActivity : AppCompatActivity() {
     }
 
     private fun showNextCard() {
-        if (cards.isEmpty()) return
-
-        ratingJob?.cancel()
-
-        if (currentPosition < cards.size - 1) {
-            currentPosition++
-            showingQuestion = true
-            updateCardDisplay()
-        } else {
+        if (cards.isEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("Сессия завершена")
-                .setMessage("Вы просмотрели все карточки!")
+                .setMessage("Карточки для повторения закончились")
                 .setPositiveButton("OK") { _, _ ->
                     currentPosition = 0
                     showingQuestion = true
@@ -198,8 +191,19 @@ class BuiltInCardsActivity : AppCompatActivity() {
                     updateCardDisplay()
                 }
                 .show()
+            return
         }
+
+        ratingJob?.cancel()
         saveCardSolved()
+
+        if (currentPosition < cards.size - 1) {
+            currentPosition++
+            showingQuestion = true
+            updateCardDisplay()
+        } else {
+            updateCardDisplay()
+        }
     }
 
     private fun flipCard() {

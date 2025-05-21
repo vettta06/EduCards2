@@ -166,7 +166,7 @@ class AchievementManager(private val context: Context, private val cardDao: Card
     private fun showAchievementToast(title: String) {
         val achievement = allAchievements.find { it.title == title }
         achievement?.let {
-            val toast = Toast.makeText(context, "Ачивка разблокирована: $title", Toast.LENGTH_LONG)
+            val toast = Toast.makeText(context, "Достижение разблокировано: $title", Toast.LENGTH_LONG)
             val view = toast.view
             val text = view?.findViewById<TextView>(android.R.id.message)
             text?.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_achievement_unlocked, 0, 0, 0)
