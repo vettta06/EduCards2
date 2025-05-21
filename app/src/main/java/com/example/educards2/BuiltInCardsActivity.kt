@@ -48,8 +48,8 @@ class BuiltInCardsActivity : AppCompatActivity() {
         tvDeckTitle = findViewById(R.id.tvDeckTitle)
         achievementManager = AchievementManager(
             this,
-            db.cardDao(),
-            StreakManager(applicationContext)
+            AppDatabase.getDatabase(this).cardDao(),
+            StreakManager(this)
         )
         loadDecks()
         setupClickListeners()
@@ -83,6 +83,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
         }
 
     }
+
     private fun setupDecksRecyclerView() {
         deckAdapter = DeckAdapter { deck ->
             currentDeck = deck

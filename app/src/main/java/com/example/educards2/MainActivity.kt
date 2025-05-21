@@ -3,10 +3,8 @@ package com.example.educards2
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -21,6 +19,7 @@ import com.google.android.material.navigation.NavigationView
 import java.util.concurrent.TimeUnit
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.CardDao
@@ -34,17 +33,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var achievementManager: AchievementManager
     lateinit var cardDao: CardDao
 
-   /* private val achievements = listOf(
-        Achievement("Новичок", "Создана первая карточка", R.drawable.ic_achievement_locked, false),
-        Achievement("Серийный ученик", "5 дней подряд", R.drawable.ic_achievement_locked, false),
-        Achievement("Карточный магнат", "Создано 50 карт", R.drawable.ic_achievement_locked, false),
-        Achievement("Усердный ученик", "Оценено 20 карт", R.drawable.ic_achievement_locked, false),
-        Achievement("Без ошибок", "10 верных ответов подряд", R.drawable.ic_achievement_locked, false),
-        Achievement("Разнообразие в оценках", "Использованы все оценки", R.drawable.ic_achievement_locked, false),
-        Achievement("Мастер повторений", "Повторие без ошибок", R.drawable.ic_achievement_locked, false),
-        Achievement("100 карточек", "Оценено 100 карточек", R.drawable.ic_achievement_locked, false),
-        Achievement("Легенда обучения", "Получены все ачивки", R.drawable.ic_achievement_locked, false)
-    )*/
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -58,6 +46,13 @@ class MainActivity : AppCompatActivity() {
             cardDao,
             streakManager
         )
+        achievementManager.achievementsUpdated.observe(this) { updated ->
+            if (updated == true) {
+                updateAchievementsUI()
+                achievementManager.resetAchievementsUpdated()
+            }
+        }
+
         setupUI()
         updateStreakViews()
         setupWorkManager()
@@ -101,11 +96,11 @@ class MainActivity : AppCompatActivity() {
         updateAchievementsUI()
     }
 
-    fun updateAchievementsUI() {
+    private fun updateAchievementsUI() {
         val gridLayout = binding.achievementsGrid
         gridLayout.removeAllViews()
-
         achievementManager.allAchievements.forEach { achievement ->
+
             val achievementView = LayoutInflater.from(this)
                 .inflate(R.layout.item_achievement, gridLayout, false)
 
@@ -130,7 +125,6 @@ class MainActivity : AppCompatActivity() {
             gridLayout.addView(achievementView)
         }
     }
-
     private fun showAchievementPopup(achievement: Achievement) {
         AlertDialog.Builder(this)
             .setTitle(achievement.title)
@@ -138,13 +132,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("OK", null)
             .show()
     }
-
-    /*private fun loadAchievementsStatus() {
-        val prefs = getSharedPreferences("achievements", MODE_PRIVATE)
-        achievements.forEach {
-            it.unlocked = prefs.getBoolean(it.title, false)
-        }
-    }*/
 
     private fun setupToolbar() {
         setSupportActionBar(binding.toolbar)

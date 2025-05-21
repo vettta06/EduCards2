@@ -2,16 +2,24 @@ package com.example.educards2
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.example.educards2.Stats.StreakManager
 import com.example.educards2.database.Achievement
 import com.example.educards2.database.Card
 import com.example.educards2.database.CardDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AchievementManager(private val context: Context, private val cardDao: CardDao, private val streakManager: StreakManager) {
     private val prefs: SharedPreferences = context.getSharedPreferences("achievements", Context.MODE_PRIVATE)
-
-    val allAchievements = listOf(
+    private val _achievementsUpdated = MutableLiveData<Boolean>()
+    val achievementsUpdated: LiveData<Boolean> = _achievementsUpdated
+    var allAchievements = listOf(
         Achievement(
             "Новичок",
             "Создана первая карточка",
@@ -26,13 +34,13 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         ),
         Achievement(
             "Карточный магнат",
-            "Создано 50 карт",
+            "Создано 50 карточек",
             R.drawable.ic_achievement_locked,
             false
         ),
         Achievement(
             "Усердный ученик",
-            "Оценено 20 карт",
+            "Оценено 20 карточек",
             R.drawable.ic_achievement_locked,
             false
         ),
@@ -43,7 +51,7 @@ class AchievementManager(private val context: Context, private val cardDao: Card
             false
         ),
         Achievement(
-            "Разнообразие в оценках",
+            "Оценочник",
             "Использованы все оценки",
             R.drawable.ic_achievement_locked,
             false
@@ -53,21 +61,24 @@ class AchievementManager(private val context: Context, private val cardDao: Card
             R.drawable.ic_achievement_locked,
             false
         ),Achievement(
-            "100 карточек",
+            "Карточный критик",
             "Оценено 100 карточек",
             R.drawable.ic_achievement_locked,
             false
-         ),Achievement(
+        ),Achievement(
             "Легенда обучения",
             "Получены все ачивки",
             R.drawable.ic_achievement_locked,
             false
         )
     )
+    init {
+        loadAchievementStatuses()
+    }
     suspend fun checkAllAchievements() {
         val allCards = cardDao.getAllCardsSync()
         val userCards = allCards.filter { !it.isBuiltIn }
-        checkFirstCardCreated(userCards)
+        checkFirstCardCreated()
         checkStreakAchievement()
         checkCardsCreated(userCards)
         checkCardsRated(allCards)
@@ -77,16 +88,25 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         checkAllAchievementsUnlocked()
     }
 
-    private suspend fun checkFirstCardCreated(cards: List<Card>) {
-        if (cards.isNotEmpty()) {
+    private fun loadAchievementStatuses() {
+        // Get current status
+        for (achievement in allAchievements) {
+            achievement.unlocked = isAchievementUnlocked(achievement.title)
+        }
+    }
+    private fun isAchievementUnlocked(title: String): Boolean {
+        return prefs.getBoolean("achievement_$title", false)
+    }
+    private suspend fun checkFirstCardCreated() {
+        val userCardsCount = cardDao.getUserCardsCount()
+        if (userCardsCount >= 1 && !isAchievementUnlocked("Новичок")) {
             unlockAchievement("Новичок")
         }
     }
-
     private suspend fun checkCardsCreated(cards: List<Card>) {
         when {
+            cards.size >= 100 -> unlockAchievement("Карточный критик")
             cards.size >= 50 -> unlockAchievement("Карточный магнат")
-            cards.size >= 100 -> unlockAchievement("100 карточек!")
         }
     }
     private fun checkStreakAchievement() {
@@ -107,23 +127,19 @@ class AchievementManager(private val context: Context, private val cardDao: Card
     private suspend fun checkPerfectAnswers(cards: List<Card>) {
         val perfectCount = cards.count { it.rating == 5 }
         if (perfectCount >= 10) {
-            unlockAchievement("Без ошибок!")
+            unlockAchievement("Без ошибок")
         }
     }
 
     private suspend fun checkVarietyInRatings(cards: List<Card>) {
         val existingRatings = cards.mapNotNull { it.rating }.distinct()
         if ((0..5).all { it in existingRatings }) {
-            unlockAchievement("Разнообразие в оценках")
+            unlockAchievement("Оценочник")
         }
     }
 
-    fun isAchievementUnlocked(title: String): Boolean {
-        return prefs.getBoolean("achievement_$title", false)
-    }
-
     private fun checkAllAchievementsUnlocked() {
-        val allUnlocked = allAchievements.all { it.unlocked }
+        val allUnlocked = allAchievements.all { isAchievementUnlocked(it.title) }
         if (allUnlocked && !isAchievementUnlocked("Легенда обучения")) {
             unlockAchievement("Легенда обучения")
         }
@@ -137,20 +153,26 @@ class AchievementManager(private val context: Context, private val cardDao: Card
     fun unlockAchievement(title: String) {
         if (!isAchievementUnlocked(title)) {
             prefs.edit().putBoolean("achievement_$title", true).apply()
-            // Обновляем состояние в списке
             allAchievements.find { it.title == title }?.unlocked = true
-            showAchievementNotification(title)
+            CoroutineScope(Dispatchers.Main).launch {
+                showAchievementToast(title)
+            }
+            _achievementsUpdated.postValue(true)
+        }
+    }
+    private fun showAchievementToast(title: String) {
+        val achievement = allAchievements.find { it.title == title }
+        achievement?.let {
+            val toast = Toast.makeText(context, "Ачивка разблокирована: $title", Toast.LENGTH_LONG)
+            val view = toast.view
+            val text = view?.findViewById<TextView>(android.R.id.message)
+            text?.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_achievement_unlocked, 0, 0, 0)
+            text?.compoundDrawablePadding = 16
+            toast.show()
         }
     }
 
-    private fun showAchievementNotification(title: String) {
-        val achievement = allAchievements.find { it.title == title }
-        achievement?.let {
-            Toast.makeText(
-                context,
-                "Ачивка разблокирована: $title",
-                Toast.LENGTH_LONG
-            ).show()
-        }
+    fun resetAchievementsUpdated() {
+        _achievementsUpdated.postValue(false)
     }
 }

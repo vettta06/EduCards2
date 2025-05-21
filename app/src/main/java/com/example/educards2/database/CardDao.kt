@@ -55,4 +55,6 @@ interface CardDao {
     @Query("SELECT * FROM cards WHERE deckId = :deckId AND isArchived = 0 AND (nextReview <= :currentTime OR nextReview IS NULL)")
     fun getDueCardsByDeck(deckId: Long, currentTime: Long = System.currentTimeMillis()): Flow<List<Card>>
 
+    @Query("SELECT COUNT(*) FROM cards WHERE isBuiltIn = 0")
+    suspend fun getUserCardsCount(): Int
 }

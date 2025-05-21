@@ -2,6 +2,7 @@ package com.example.educards2
 
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -20,6 +21,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.getValue
 
 class UserCardsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityUserCardsBinding
@@ -36,10 +38,11 @@ class UserCardsActivity : AppCompatActivity() {
         binding = ActivityUserCardsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         db = AppDatabase.getDatabase(this)
+
         achievementManager = AchievementManager(
             this,
-            db.cardDao(),
-            StreakManager(applicationContext)
+            AppDatabase.getDatabase(this).cardDao(),
+            StreakManager(this)
         )
         setupClickListeners()
         loadCards()
@@ -127,15 +130,19 @@ class UserCardsActivity : AppCompatActivity() {
                 )
                 lifecycleScope.launch(Dispatchers.IO) {
                     db.cardDao().insert(card)
-                    val count = db.cardDao().getCardsCount()
-                    if (count == 0) {
-                        withContext(Dispatchers.Main) {
-                            achievementManager.unlockAchievement("Новичок")
-                            (this@UserCardsActivity as? MainActivity)?.updateAchievementsUI()
-                        }
+                    val userCardsCount = db.cardDao().getUserCardsCount()
+
+                    if (userCardsCount == 1) { // Проверяем именно первую пользовательскую карточку
+                        achievementManager.unlockAchievement("Новичок")
                     }
 
-                    loadCards()
+                    withContext(Dispatchers.Main) {
+                        loadCards()
+                        // Убираем неправильное приведение типа
+                    }
+
+                    // Автоматическая проверка всех достижений
+                    achievementManager.checkAllAchievements()
                 }
             }
             .setNegativeButton(R.string.btn_cancel, null)
