@@ -16,7 +16,7 @@ class DeckAdapter(private val onClick: (Deck) -> Unit) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(deck: Deck) {
             binding.deckName.text = deck.name
-            binding.deckIcon.setImageResource(deck.iconResId)
+            binding.deckIcon.setImageResource(R.drawable.ic_default_deck)
             itemView.setOnClickListener { onClick(deck) }
         }
     }

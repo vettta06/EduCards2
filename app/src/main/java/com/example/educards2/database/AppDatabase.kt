@@ -35,7 +35,6 @@ abstract class AppDatabase : RoomDatabase() {
                             GlobalScope.launch(Dispatchers.IO) {
                                 val cards = getDefaultCards()
                                 getDatabase(context).cardDao().insertAll(cards)
-                                Log.d("DB", "Добавлено ${cards.size} карточек")
                             }
                         }
                     })
@@ -115,7 +114,6 @@ abstract class AppDatabase : RoomDatabase() {
                     isBuiltIn = true
                 ),
 
-                // ООП
                 Card(
                     deckId = 3,
                     question = "Что такое класс?",

@@ -116,7 +116,6 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         }
     }
 
-
     private suspend fun checkCardsRated(cards: List<Card>) {
         val ratedCount = cards.count { it.rating != null }
         if (ratedCount >= 20) {
