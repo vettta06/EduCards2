@@ -132,16 +132,13 @@ class UserCardsActivity : AppCompatActivity() {
                     db.cardDao().insert(card)
                     val userCardsCount = db.cardDao().getUserCardsCount()
 
-                    if (userCardsCount == 1) { // Проверяем именно первую пользовательскую карточку
+                    if (userCardsCount == 1) {
                         achievementManager.unlockAchievement("Новичок")
                     }
 
                     withContext(Dispatchers.Main) {
                         loadCards()
-                        // Убираем неправильное приведение типа
                     }
-
-                    // Автоматическая проверка всех достижений
                     achievementManager.checkAllAchievements()
                 }
             }

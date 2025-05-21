@@ -181,29 +181,31 @@ class BuiltInCardsActivity : AppCompatActivity() {
                 .setTitle("Сессия завершена")
                 .setMessage("Карточки для повторения закончились")
                 .setPositiveButton("OK") { _, _ ->
-                    currentPosition = 0
-                    showingQuestion = true
+                    resetCardState()
                     currentDeck?.let { loadCardsForDeck(it.id) }
                 }
                 .setOnCancelListener {
-                    currentPosition = 0
-                    showingQuestion = true
+                    resetCardState()
                     updateCardDisplay()
                 }
                 .show()
             return
         }
-
         ratingJob?.cancel()
-        saveCardSolved()
-
+        if (currentPosition < cards.size - 1) {
+            saveCardSolved()
+        }
+        showingQuestion = true
         if (currentPosition < cards.size - 1) {
             currentPosition++
-            showingQuestion = true
-            updateCardDisplay()
-        } else {
-            updateCardDisplay()
         }
+        updateCardDisplay()
+    }
+
+    private fun resetCardState() {
+        currentPosition = 0
+        showingQuestion = true
+        ratingJob?.cancel()
     }
 
     private fun flipCard() {
@@ -235,6 +237,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
         binding.apply {
             if (cards.isEmpty()) {
                 tvCardContent.text = "Нет карточек для повторения"
+                tvCardCount.text = "0/0"
                 cardView.setCardBackgroundColor(
                     ContextCompat.getColor(
                         this@BuiltInCardsActivity,
