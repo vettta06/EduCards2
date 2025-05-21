@@ -57,7 +57,7 @@ class AchievementManager(private val context: Context, private val cardDao: Card
             false
         ),Achievement(
             "Мастер повторений",
-            "Повторение без ошибок",
+            "Повторение 10 карточек без ошибок",
             R.drawable.ic_achievement_locked,
             false
         ),Achievement(
@@ -145,9 +145,12 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         }
     }
     private suspend fun checkRepetitionMaster(cards: List<Card>) {
-        val perfectSession = cards.takeLast(10).all { it.rating == 5 }
-        if (perfectSession && !isAchievementUnlocked("Мастер повторений")) {
-            unlockAchievement("Мастер повторений")
+        val ratedCards = cards.filter { it.rating != 0 }
+        if (ratedCards.size >= 10) {
+            val perfectSession = ratedCards.takeLast(10).all { it.rating == 5 }
+            if (perfectSession && !isAchievementUnlocked("Мастер повторений")) {
+                unlockAchievement("Мастер повторений")
+            }
         }
     }
     fun unlockAchievement(title: String) {
