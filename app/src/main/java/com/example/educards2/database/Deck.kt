@@ -10,11 +10,8 @@ import com.example.educards2.R
 data class Deck(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-
     val name: String,
-    val description: String,
     val isBuiltIn: Boolean = false,
-    //val iconResId: Int = R.drawable.ic_default_deck,
     @ColumnInfo(defaultValue = "0")
     val isLocked: Boolean = isBuiltIn
 )

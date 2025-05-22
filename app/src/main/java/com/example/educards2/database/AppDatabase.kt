@@ -49,21 +49,18 @@ abstract class AppDatabase : RoomDatabase() {
             val linearAlgebraDeck = Deck(
                 id = 1,
                 name = "Линейная алгебра",
-                description = "Основы линейной алгебры",
                 isBuiltIn = true
             )
 
             val mathAnalysisDeck = Deck(
                 id = 2,
                 name = "Математический анализ",
-                description = "Основы матанализа",
                 isBuiltIn = true
             )
 
             val oopDeck = Deck(
                 id = 3,
                 name = "ООП",
-                description = "Объектно-ориентированное программирование",
                 isBuiltIn = true
             )
 

@@ -1,6 +1,7 @@
 package com.example.educards2
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -21,6 +22,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import kotlin.getValue
 
 class UserCardsActivity : AppCompatActivity() {
@@ -192,24 +194,47 @@ class UserCardsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showNextCard(){
-        if (cards.isEmpty()) return
+    private fun showNextCard() {
+        if (cards.isEmpty()) {
+            showEmptyCardsDialog()
+            return
+        }
 
         if (currentPosition < cards.size - 1) {
             currentPosition++
+            saveCardSolved()
         } else {
-            AlertDialog.Builder(this)
-                .setTitle("Сессия завершена")
-                .setMessage("Вы просмотрели все карточки!")
-                .setPositiveButton("OK") { _, _ ->
-                    currentPosition = 0
-                }
-                .show()
+            showSessionCompleteDialog()
         }
+
         showingQuestion = true
         updateCardDisplay()
     }
+    private fun showSessionCompleteDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Сессия завершена")
+            .setMessage("Все карточки просмотрены!")
+            .setPositiveButton("OK") { _, _ ->
+                resetSession()
+            }
+            .setOnCancelListener {
+                resetSession()
+            }
+            .show()
+    }
 
+    private fun resetSession() {
+        currentPosition = 0
+        loadCards()
+        updateCardDisplay()
+    }
+
+    private fun showEmptyCardsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Нет карточек")
+            .setPositiveButton("OK", null)
+            .show()
+    }
     private fun flipCard() {
         if (isAnimating) return
         isAnimating = true
@@ -266,16 +291,20 @@ class UserCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
-                            loadCards()
+                            withContext(Dispatchers.Main) {
+                                loadCards()
+                            }
                         }
                         showNextCard()
                         binding.cardView.alpha = 1f
                     }
                     .start()
-
+                Log.d("CARD_DEBUG", "Updated card: ${currentCard.id}")
+                Log.d("CARD_DEBUG", "New interval: ${currentCard.currentInterval}")
+                Log.d("CARD_DEBUG", "Next review: ${Date(currentCard.nextReview)}")
                 Toast.makeText(
                     this,
-                    "Оценка $selectedRating. Следующий показ: ${formatInterval(selectedRating)}",
+                    "Оценка $selectedRating. Следующий показ: ${formatInterval(currentCard)}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -287,36 +316,52 @@ class UserCardsActivity : AppCompatActivity() {
     }
     private fun updateCardDisplay() {
         binding.apply {
-            if (cards.isEmpty()) {
+            if (cards.isEmpty() || currentPosition !in cards.indices) {
+                currentPosition = 0
                 tvCardContent.text = getString(R.string.no_cards)
+                tvCardCount.text = "0/0"
                 cardView.setCardBackgroundColor(
                     ContextCompat.getColor(
                         this@UserCardsActivity,
                         R.color.card_default
                     )
                 )
-            } else {
-                val card = cards[currentPosition]
-                tvCardContent.text = if (showingQuestion) card.question else card.answer
-                val targetColor = ContextCompat.getColor(
-                    this@UserCardsActivity,
-                    if (showingQuestion) R.color.color_question else R.color.color_answer
-                )
-                cardView.setCardBackgroundColor(targetColor)
+                btnPrev.isEnabled = false
+                btnNext.isEnabled = false
+                btnArchive.isEnabled = false
+                return
             }
+
+            val card = cards[currentPosition]
+            tvCardContent.text = if (showingQuestion) card.question else card.answer
+
+            val targetColor = ContextCompat.getColor(
+                this@UserCardsActivity,
+                if (showingQuestion) R.color.color_question else R.color.color_answer
+            )
+            cardView.setCardBackgroundColor(targetColor)
+
             tvCardCount.text = "${currentPosition + 1}/${cards.size}"
+
+            btnPrev.isEnabled = currentPosition > 0
+            btnNext.isEnabled = currentPosition < cards.size - 1
+            btnArchive.isEnabled = true
+            cardView.invalidate()
         }
     }
+    private fun formatInterval(card: Card): String {
+        val intervalMillis = card.currentInterval
+        if (intervalMillis <= 0) return "сразу"
 
-    private fun formatInterval(rating: Int): String {
-        return when (rating) {
-            5 -> "1 ${pluralDays(1)}"
-            4 -> "12 ${pluralHours(12)}"
-            3 -> "4 ${pluralHours(4)}"
-            2 -> "2 ${pluralHours(2)}"
-            1 -> "1 ${pluralHours(1)}"
-            0 -> "15 ${pluralMinutes(15)}"
-            else -> error("Недопустимый рейтинг: $rating")
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(intervalMillis)
+        val hours = TimeUnit.MILLISECONDS.toHours(intervalMillis)
+        val days = TimeUnit.MILLISECONDS.toDays(intervalMillis)
+
+        return when {
+            days > 0 -> "$days ${pluralDays(days.toInt())}"
+            hours > 0 -> "$hours ${pluralHours(hours.toInt())}"
+            minutes > 0 -> "$minutes ${pluralMinutes(minutes.toInt())}"
+            else -> "менее минуты"
         }
     }
     private fun pluralDays(n: Int) = when {

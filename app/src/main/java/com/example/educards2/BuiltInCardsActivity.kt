@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 
 class BuiltInCardsActivity : AppCompatActivity() {
@@ -176,7 +177,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
     }
 
     private fun showNextCard() {
-        if (cards.isEmpty()) {
+        if (cards.isEmpty() || currentPosition !in cards.indices) {
             AlertDialog.Builder(this)
                 .setTitle("Сессия завершена")
                 .setMessage("Карточки для повторения закончились")
@@ -291,18 +292,21 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
-                            currentDeck?.let { loadCardsForDeck(it.id) }
-
+                            withContext(Dispatchers.Main) {
+                                currentDeck?.let { loadCardsForDeck(it.id) }
+                            }
                             achievementManager.checkAllAchievements()
                         }
                         showNextCard()
                         binding.cardView.alpha = 1f
                     }
                     .start()
-
+                Log.d("CARD_DEBUG", "Updated card: ${currentCard.id}")
+                Log.d("CARD_DEBUG", "New interval: ${currentCard.currentInterval}")
+                Log.d("CARD_DEBUG", "Next review: ${Date(currentCard.nextReview)}")
                 Toast.makeText(
                     this,
-                    "Оценка $selectedRating. Следующий показ: ${formatInterval(selectedRating)}",
+                    "Оценка $selectedRating. Следующий показ: ${formatInterval(currentCard)}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -322,15 +326,19 @@ class BuiltInCardsActivity : AppCompatActivity() {
             )
         }
     }
-    private fun formatInterval(rating: Int): String {
-        return when (rating) {
-            5 -> "1 ${pluralDays(1)}"
-            4 -> "12 ${pluralHours(12)}"
-            3 -> "4 ${pluralHours(4)}"
-            2 -> "2 ${pluralHours(2)}"
-            1 -> "1 ${pluralHours(1)}"
-            0 -> "15 ${pluralMinutes(15)}"
-            else -> error("Недопустимый рейтинг: $rating")
+    private fun formatInterval(card: Card): String {
+        val intervalMillis = card.currentInterval
+        if (intervalMillis <= 0) return "сразу"
+
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(intervalMillis)
+        val hours = TimeUnit.MILLISECONDS.toHours(intervalMillis)
+        val days = TimeUnit.MILLISECONDS.toDays(intervalMillis)
+
+        return when {
+            days > 0 -> "$days ${pluralDays(days.toInt())}"
+            hours > 0 -> "$hours ${pluralHours(hours.toInt())}"
+            minutes > 0 -> "$minutes ${pluralMinutes(minutes.toInt())}"
+            else -> "менее минуты"
         }
     }
     private fun pluralDays(n: Int) = when {

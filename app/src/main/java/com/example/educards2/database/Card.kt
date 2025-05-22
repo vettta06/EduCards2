@@ -28,27 +28,40 @@ data class Card(
     val isBuiltIn: Boolean = false,
     var isArchived: Boolean = false
 ) {
+
     fun updateEFactor(q: Int) {
         val delta = 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)
         eFactor = (eFactor + delta).coerceIn(1.3, 2.5)
     }
 
     fun updateIntervals(q: Int, context: Context) {
-        val newInterval = when (q) {
-            0 -> 15L * 60 * 1000
-            1 -> 1L * 60 * 60 * 1000
-            2 -> 2L * 60 * 60 * 1000
-            3 -> 4L * 60 * 60 * 1000
-            4 -> 12L * 60 * 60 * 1000
-            5 -> 24L * 60 * 60 * 1000
-            else -> currentInterval
+        val ONE_MONTH = 30L * 24 * 60 * 60 * 1000
+
+        currentInterval = when {
+            currentInterval == 0L -> when (q) {
+                0 -> 15L * 60 * 1000       // 15 минут
+                1 -> 1L * 60 * 60 * 1000   // 1 час
+                2 -> 4L * 60 * 60 * 1000   // 4 часа
+                3 -> 8L * 60 * 60 * 1000   // 8 часов
+                4 -> 16L * 60 * 60 * 1000  // 16 часов
+                5 -> 24L * 60 * 60 * 1000  // 24 часа
+                else -> 24L * 60 * 60 * 1000
+            }
+
+            else -> when (q) {
+                0 -> 15L * 60 * 1000
+                1 -> (currentInterval * 0.5).toLong()
+                2 -> currentInterval
+                3 -> (currentInterval * 1.2 * eFactor).toLong()
+                4 -> (currentInterval * 1.5 * eFactor).toLong()
+                5 -> (currentInterval * 2.0 * eFactor).toLong()
+                else -> currentInterval
+            }.coerceAtMost(ONE_MONTH)
         }
 
-        currentInterval = newInterval
-        nextReview = System.currentTimeMillis() + newInterval
+        nextReview = System.currentTimeMillis() + currentInterval
         scheduleNotification(context)
     }
-
     fun scheduleNotification(context: Context) {
         if (nextReview <= System.currentTimeMillis()) return
 
