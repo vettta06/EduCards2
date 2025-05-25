@@ -34,7 +34,6 @@ class UserCardsActivity : AppCompatActivity() {
     private var ratingJob: Job? = null
     private var isAnimating = false
     private lateinit var achievementManager: AchievementManager
-    private lateinit var streakManager: StreakManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -266,56 +265,58 @@ class UserCardsActivity : AppCompatActivity() {
             showRatingDialog()
         }
     }
-    private fun showRatingDialog() {
-        val currentCard = cards.getOrNull(currentPosition) ?: return
-        val ratingsWithDescriptions = arrayOf(
-            "0 - Совсем забыл(а)",
-            "1 - Неправильный ответ, правильный вспомнился с трудом",
-            "2 - Неправильный ответ, правильный вспомнился легко",
-            "3 - Правильный ответ после длительного размышления",
-            "4 - Правильный ответ после небольшой заминки",
-            "5 - Идеальный ответ"
-        )
 
-        AlertDialog.Builder(this)
-            .setTitle("Оцените свой ответ")
-            .setItems(ratingsWithDescriptions) { _, which ->
-                val selectedRating = which
-                binding.cardView.animate()
-                    .alpha(0f)
-                    .setDuration(300)
-                    .withEndAction {
-                        currentCard.apply {
-                            rating = selectedRating
-                            updateEFactor(selectedRating)
-                            updateIntervals(selectedRating, this@UserCardsActivity)
-                        }
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            db.cardDao().update(currentCard)
-                            streakManager.updateStreak()
-                            withContext(Dispatchers.Main) {
-                                loadCards()
-                            }
-                        }
-                        showNextCard()
-                        binding.cardView.alpha = 1f
-                    }
-                    .start()
-                Log.d("CARD_DEBUG", "Updated card: ${currentCard.id}")
-                Log.d("CARD_DEBUG", "New interval: ${currentCard.currentInterval}")
-                Log.d("CARD_DEBUG", "Next review: ${Date(currentCard.nextReview)}")
-                Toast.makeText(
-                    this,
-                    "Оценка $selectedRating. Следующий показ: ${formatInterval(currentCard)}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            .setNegativeButton("Отмена") { _, _ ->
-                showingQuestion = true
-                updateCardDisplay()
-            }
-            .show()
-    }
+   private fun showRatingDialog() {
+       val currentCard = cards.getOrNull(currentPosition) ?: return
+       val ratingsWithDescriptions = arrayOf(
+           "0 - Совсем забыл(а)",
+           "1 - Неправильный ответ, правильный вспомнился с трудом",
+           "2 - Неправильный ответ, правильный вспомнился легко",
+           "3 - Правильный ответ после длительного размышления",
+           "4 - Правильный ответ после небольшой заминки",
+           "5 - Идеальный ответ"
+       )
+
+       AlertDialog.Builder(this)
+           .setTitle("Оцените свой ответ")
+           .setItems(ratingsWithDescriptions) { _, which ->
+               val selectedRating = which
+               binding.cardView.animate()
+                   .alpha(0f)
+                   .setDuration(300)
+                   .withEndAction {
+                       lifecycleScope.launch(Dispatchers.IO) {
+                           currentCard.apply {
+                               rating = selectedRating
+                               updateEFactor(selectedRating)
+                               updateIntervals(selectedRating, this@UserCardsActivity)
+                           }
+                           db.cardDao().update(currentCard)
+
+                           val updatedCards = db.cardDao().getAllCardsSync()
+                               .filter { !it.isBuiltIn }
+                               .filter { !it.isArchived }
+                               .filter { it.isDue() }
+
+                           val newCards = updatedCards.filterNot { it.id == currentCard.id }
+
+                           withContext(Dispatchers.Main) {
+                               showingQuestion = true
+                               cards = newCards
+                               currentPosition = 0
+                               updateCardDisplay()
+                               binding.cardView.alpha = 1f
+                           }
+                       }
+                   }
+                   .start()
+           }
+           .setNegativeButton("Отмена") { _, _ ->
+               showingQuestion = true
+               updateCardDisplay()
+           }
+           .show()
+   }
     private fun updateCardDisplay() {
         binding.apply {
             if (cards.isEmpty() || currentPosition !in cards.indices) {
