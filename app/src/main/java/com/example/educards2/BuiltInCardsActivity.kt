@@ -40,6 +40,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
     private var cards = emptyList<Card>()
     private lateinit var tvDeckTitle: TextView
     private lateinit var achievementManager: AchievementManager
+    private lateinit var streakManager: StreakManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -292,6 +293,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
+                            streakManager.updateStreak()
                             withContext(Dispatchers.Main) {
                                 currentDeck?.let { loadCardsForDeck(it.id) }
                             }

@@ -34,6 +34,7 @@ class UserCardsActivity : AppCompatActivity() {
     private var ratingJob: Job? = null
     private var isAnimating = false
     private lateinit var achievementManager: AchievementManager
+    private lateinit var streakManager: StreakManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -291,6 +292,7 @@ class UserCardsActivity : AppCompatActivity() {
                         }
                         lifecycleScope.launch(Dispatchers.IO) {
                             db.cardDao().update(currentCard)
+                            streakManager.updateStreak()
                             withContext(Dispatchers.Main) {
                                 loadCards()
                             }

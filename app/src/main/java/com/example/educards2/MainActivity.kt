@@ -21,9 +21,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingPeriodicWorkPolicy
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.CardDao
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -82,16 +84,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWorkManager() {
-        val dailyRequest: PeriodicWorkRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
+        val dailyRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
             1,
-            TimeUnit.DAYS
+            TimeUnit.DAYS,
+            15,
+            TimeUnit.MINUTES
         )
-            .setInitialDelay(1, TimeUnit.DAYS)
+            .setInitialDelay(calculateInitialDelay(), TimeUnit.MILLISECONDS)
             .build()
 
-        WorkManager.getInstance(this).enqueue(dailyRequest)
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "daily_streak_check",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            dailyRequest
+        )
     }
 
+    private fun calculateInitialDelay(): Long {
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+        }
+        return calendar.timeInMillis - System.currentTimeMillis()
+    }
     private fun setupAchievements() {
         updateAchievementsUI()
     }

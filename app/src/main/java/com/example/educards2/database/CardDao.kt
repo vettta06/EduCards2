@@ -57,4 +57,7 @@ interface CardDao {
 
     @Query("SELECT COUNT(*) FROM cards WHERE isBuiltIn = 0")
     suspend fun getUserCardsCount(): Int
+
+    @Query("SELECT COUNT(*) FROM cards WHERE isBuiltIn = 0")
+    suspend fun getTotalUserCardsCreated(): Int
 }

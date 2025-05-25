@@ -104,9 +104,11 @@ class AchievementManager(private val context: Context, private val cardDao: Card
         }
     }
     private suspend fun checkCardsCreated(cards: List<Card>) {
+        val totalCreated = cardDao.getTotalUserCardsCreated()
+
         when {
-            cards.size >= 100 -> unlockAchievement("Карточный критик")
-            cards.size >= 50 -> unlockAchievement("Карточный магнат")
+            totalCreated >= 100 -> unlockAchievement("Карточный критик")
+            totalCreated >= 50 -> unlockAchievement("Карточный магнат")
         }
     }
     private fun checkStreakAchievement() {
