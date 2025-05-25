@@ -317,6 +317,8 @@ class UserCardsActivity : AppCompatActivity() {
            }
            .show()
    }
+
+
     private fun updateCardDisplay() {
         binding.apply {
             if (cards.isEmpty() || currentPosition !in cards.indices) {

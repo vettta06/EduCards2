@@ -304,9 +304,14 @@ class BuiltInCardsActivity : AppCompatActivity() {
                                     showingQuestion = true
 
                                     if (cards.isEmpty()) {
-                                        binding.cardsContainer.visibility = View.GONE
-                                        binding.decksRecyclerView.visibility = View.VISIBLE
+                                        Toast.makeText(
+                                            this@BuiltInCardsActivity,
+                                            "Все карточки пройдены!",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     } else {
+                                        currentPosition = 0
+                                        showingQuestion = true
                                         updateCardDisplay()
                                     }
                                     binding.cardView.alpha = 1f
