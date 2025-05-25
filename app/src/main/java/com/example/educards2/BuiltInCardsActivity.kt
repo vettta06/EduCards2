@@ -278,7 +278,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             "5 - Идеальный ответ"
         )
 
-        AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Оцените свой ответ")
             .setItems(ratingsWithDescriptions) { _, which ->
                 val selectedRating = which
@@ -286,31 +286,35 @@ class BuiltInCardsActivity : AppCompatActivity() {
                     .alpha(0f)
                     .setDuration(300)
                     .withEndAction {
-                        currentCard.apply {
-                            rating = selectedRating
-                            updateEFactor(selectedRating)
-                            updateIntervals(selectedRating, this@BuiltInCardsActivity)
-                        }
                         lifecycleScope.launch(Dispatchers.IO) {
-                            db.cardDao().update(currentCard)
-                            streakManager.updateStreak()
-                            withContext(Dispatchers.Main) {
-                                currentDeck?.let { loadCardsForDeck(it.id) }
+                            currentDeck?.let { deck ->
+                                currentCard.apply {
+                                    rating = which
+                                    updateEFactor(which)
+                                    updateIntervals(which, this@BuiltInCardsActivity)
+                                }
+                                db.cardDao().update(currentCard)
+
+                                val updatedCards = db.cardDao().getCardsByDeckSync(deck.id)
+                                    .filter { it.isDue() }
+
+                                withContext(Dispatchers.Main) {
+                                    cards = updatedCards
+                                    currentPosition = 0
+                                    showingQuestion = true
+
+                                    if (cards.isEmpty()) {
+                                        binding.cardsContainer.visibility = View.GONE
+                                        binding.decksRecyclerView.visibility = View.VISIBLE
+                                    } else {
+                                        updateCardDisplay()
+                                    }
+                                    binding.cardView.alpha = 1f
+                                }
                             }
-                            achievementManager.checkAllAchievements()
                         }
-                        showNextCard()
-                        binding.cardView.alpha = 1f
                     }
                     .start()
-                Log.d("CARD_DEBUG", "Updated card: ${currentCard.id}")
-                Log.d("CARD_DEBUG", "New interval: ${currentCard.currentInterval}")
-                Log.d("CARD_DEBUG", "Next review: ${Date(currentCard.nextReview)}")
-                Toast.makeText(
-                    this,
-                    "Оценка $selectedRating. Следующий показ: ${formatInterval(currentCard)}",
-                    Toast.LENGTH_SHORT
-                ).show()
             }
             .setNegativeButton("Отмена") { _, _ ->
                 showingQuestion = true
@@ -318,7 +322,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
             }
             .show()
     }
-
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
