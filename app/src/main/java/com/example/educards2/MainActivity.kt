@@ -2,6 +2,7 @@ package com.example.educards2
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.TextView
@@ -26,6 +27,7 @@ import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.CardDao
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.Date
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -83,7 +85,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupWorkManager() {
+    /*private fun setupWorkManager() {
         val dailyRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
             1,
             TimeUnit.DAYS,
@@ -98,6 +100,34 @@ class MainActivity : AppCompatActivity() {
             ExistingPeriodicWorkPolicy.UPDATE,
             dailyRequest
         )
+    }*/
+    private fun setupWorkManager() {
+        val testMode = true
+
+        val interval = if (testMode) 15L else 1L
+        val unit = if (testMode) TimeUnit.MINUTES else TimeUnit.DAYS
+        Log.d("StreakDebug", "Настройка WorkManager с интервалом: $interval ${unit.name}")
+
+        val dailyRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
+            interval,
+            unit,
+            15,
+            TimeUnit.MINUTES
+        )
+            .setInitialDelay(1, TimeUnit.MINUTES) // Задержка 1 минута для теста
+            .build()
+
+        WorkManager.getInstance(this).apply {
+            // Отменяем предыдущую задачу
+            cancelUniqueWork("daily_streak_check")
+            enqueueUniquePeriodicWork(
+                "daily_streak_check",
+                ExistingPeriodicWorkPolicy.UPDATE,
+                dailyRequest
+            )
+            Log.d("StreakDebug", "Новая задача поставлена в очередь. Время запуска: ${Date()}")
+
+        }
     }
 
     private fun calculateInitialDelay(): Long {
@@ -199,7 +229,24 @@ class MainActivity : AppCompatActivity() {
     private fun openActivity(activityClass: Class<*>) {
         startActivity(Intent(this, activityClass))
     }
-
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            achievementManager.checkAllAchievements()
+            updateAchievementsUI()
+        }
+        updateStreakViews()
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("drawer_open", binding.drawerLayout.isDrawerOpen(GravityCompat.START))
+    }
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        if (savedInstanceState.getBoolean("drawer_open")) {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+    }
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)

@@ -3,6 +3,8 @@ package com.example.educards2.Stats
 import android.content.Context
 import android.content.SharedPreferences
 import android.icu.util.Calendar
+import android.util.Log
+import java.util.Date
 
 class StreakManager(private val context: Context) {
     private val prefs = context.getSharedPreferences(
@@ -53,8 +55,13 @@ class StreakManager(private val context: Context) {
         return isSameDay(newDate, cal.timeInMillis)
     }
     fun checkStreak() {
+        Log.d("StreakDebug", "Проверка стрика...")
+
         val lastDate = prefs.getLong("last_study_date", 0)
         val currentStreak = prefs.getInt("current_streak", 0)
+        val lastActive = null
+        Log.d("StreakDebug", "Последняя активность: ${Date(lastActive)}")
+
         val calendar = Calendar.getInstance()
         val today = calendar.timeInMillis
         if (!isConsecutiveDay(today, lastDate) && !isSameDay(today, lastDate)) {
