@@ -305,6 +305,14 @@ class UserCardsActivity : AppCompatActivity() {
                                currentPosition = 0
                                updateCardDisplay()
                                binding.cardView.alpha = 1f
+
+                               if (newCards.isEmpty()) {
+                                   Toast.makeText(
+                                       this@UserCardsActivity,
+                                       "Все карточки пройдены!",
+                                       Toast.LENGTH_LONG
+                                   ).show()
+                               }
                            }
                        }
                    }
