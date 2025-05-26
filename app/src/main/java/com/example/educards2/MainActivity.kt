@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
-import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.educards2.Stats.StreakCheckWorker
@@ -27,7 +26,6 @@ import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.CardDao
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import java.util.Date
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -85,14 +83,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /*private fun setupWorkManager() {
+    private fun setupWorkManager() {
         val dailyRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
             1,
-            TimeUnit.DAYS,
-            15,
-            TimeUnit.MINUTES
+            TimeUnit.DAYS
         )
-            .setInitialDelay(calculateInitialDelay(), TimeUnit.MILLISECONDS)
+            .setInitialDelay(1, TimeUnit.DAYS)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
@@ -100,34 +96,6 @@ class MainActivity : AppCompatActivity() {
             ExistingPeriodicWorkPolicy.UPDATE,
             dailyRequest
         )
-    }*/
-    private fun setupWorkManager() {
-        val testMode = true
-
-        val interval = if (testMode) 15L else 1L
-        val unit = if (testMode) TimeUnit.MINUTES else TimeUnit.DAYS
-        Log.d("StreakDebug", "Настройка WorkManager с интервалом: $interval ${unit.name}")
-
-        val dailyRequest = PeriodicWorkRequestBuilder<StreakCheckWorker>(
-            interval,
-            unit,
-            15,
-            TimeUnit.MINUTES
-        )
-            .setInitialDelay(1, TimeUnit.MINUTES) // Задержка 1 минута для теста
-            .build()
-
-        WorkManager.getInstance(this).apply {
-            // Отменяем предыдущую задачу
-            cancelUniqueWork("daily_streak_check")
-            enqueueUniquePeriodicWork(
-                "daily_streak_check",
-                ExistingPeriodicWorkPolicy.UPDATE,
-                dailyRequest
-            )
-            Log.d("StreakDebug", "Новая задача поставлена в очередь. Время запуска: ${Date()}")
-
-        }
     }
 
     private fun calculateInitialDelay(): Long {
@@ -235,6 +203,8 @@ class MainActivity : AppCompatActivity() {
             achievementManager.checkAllAchievements()
             updateAchievementsUI()
         }
+       // viewModel.refreshStatistics()
+        streakManager.updateStreak()
         updateStreakViews()
     }
     override fun onSaveInstanceState(outState: Bundle) {

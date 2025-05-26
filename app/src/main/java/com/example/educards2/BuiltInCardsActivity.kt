@@ -287,6 +287,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
                     .setDuration(300)
                     .withEndAction {
                         lifecycleScope.launch(Dispatchers.IO) {
+                            saveCardSolved()
                             currentDeck?.let { deck ->
                                 currentCard.apply {
                                     rating = which

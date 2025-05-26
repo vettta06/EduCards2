@@ -62,7 +62,6 @@ class StatisticsViewModel(private val statsDao: StatsDao) : ViewModel() {
             set(Calendar.DAY_OF_MONTH, 1)
         }
 
-
         val existingStats = stats.associateBy { it.date }
 
         repeat(30) {

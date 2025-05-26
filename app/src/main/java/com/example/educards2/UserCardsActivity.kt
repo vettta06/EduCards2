@@ -3,7 +3,6 @@ package com.example.educards2
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -23,7 +22,6 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
-import kotlin.getValue
 
 class UserCardsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityUserCardsBinding
@@ -286,6 +284,7 @@ class UserCardsActivity : AppCompatActivity() {
                    .setDuration(300)
                    .withEndAction {
                        lifecycleScope.launch(Dispatchers.IO) {
+                           saveCardSolved()
                            currentCard.apply {
                                rating = selectedRating
                                updateEFactor(selectedRating)

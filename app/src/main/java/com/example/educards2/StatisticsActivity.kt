@@ -17,6 +17,7 @@ import com.example.educards2.ui.StatisticsViewModelFactory
 class StatisticsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             EduCardsTheme{
                 Surface(
