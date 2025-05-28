@@ -21,7 +21,6 @@ data class Card(
 
     @ColumnInfo(name = "nextReview")
     var nextReview: Long = System.currentTimeMillis(),
-
     var rating: Int = 0,
     var eFactor: Double = 2.5,
     var currentInterval: Long = 0,
@@ -94,6 +93,11 @@ data class Card(
             )
         } catch (_: Exception) {}
     }
-    fun isDue(): Boolean = System.currentTimeMillis() >= nextReview
+    fun isDue(serverTimeMillis: Long): Boolean {
+        return nextReview <= serverTimeMillis
+    }
+    fun isDue(): Boolean {
+        return nextReview <= System.currentTimeMillis()
+    }
 
 }

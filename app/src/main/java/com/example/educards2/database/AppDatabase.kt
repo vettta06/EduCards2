@@ -30,14 +30,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cards_database"
                 )
-                    .addCallback(object : Callback() {
+                    /*.addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             GlobalScope.launch(Dispatchers.IO) {
                                 val cards = getDefaultCards()
                                 getDatabase(context).cardDao().insertAll(cards)
                             }
                         }
-                    })
+                    })*/
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private fun getDefaultCards(): List<Card> {
+        /*private fun getDefaultCards(): List<Card> {
             val linearAlgebraDeck = Deck(
                 id = 1,
                 name = "Линейная алгебра",
@@ -354,6 +354,6 @@ abstract class AppDatabase : RoomDatabase() {
                     isBuiltIn = true
                 )
             )
-        }
+        }*/
     }
 }
