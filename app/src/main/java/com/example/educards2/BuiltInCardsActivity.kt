@@ -1,6 +1,10 @@
 package com.example.educards2
 
+import android.app.AlarmManager
 import android.app.AlertDialog
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -45,6 +49,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
     private lateinit var achievementManager: AchievementManager
     private lateinit var streakManager: StreakManager
     private lateinit var apiService: CardApiService
+    private var pendingCardId: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +69,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
         requestNotificationPermission()
         val cardId = intent.getLongExtra("CARD_ID", -1L)
         val deckId = intent.getLongExtra("DECK_ID", -1L)
-        if (cardId != -1L && deckId != -1L) {
+        /*if (cardId != -1L && deckId != -1L) {
             lifecycleScope.launch {
                 val deck = withContext(Dispatchers.IO) {
                     db.deckDao().getDeckById(deckId)
@@ -87,8 +92,20 @@ class BuiltInCardsActivity : AppCompatActivity() {
                     }
                 }
             }
+        }*/
+        if (pendingCardId != -1L && deckId != -1L) {
+            lifecycleScope.launch {
+                val deck = withContext(Dispatchers.IO) {
+                    db.deckDao().getDeckById(deckId)
+                }
+                deck?.let {
+                    currentDeck = it
+                    loadCardsForDeck(it.id)
+                    binding.decksRecyclerView.visibility = View.GONE
+                    binding.cardsContainer.visibility = View.VISIBLE
+                }
+            }
         }
-
     }
 
     private fun setupDecksRecyclerView() {
@@ -273,6 +290,87 @@ class BuiltInCardsActivity : AppCompatActivity() {
             btnNext.isEnabled = currentPosition < cards.size - 1
         }
     }
+    // Добавим эти функции в BuiltInCardsActivity
+    private fun updateEFactor(currentEFactor: Double, rating: Int): Double {
+        val delta = 0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02)
+        return (currentEFactor + delta).coerceIn(1.3, 2.5)
+    }
+
+    private fun calculateNextReview(
+        rating: Int,
+        currentInterval: Long,
+        eFactor: Double,
+        repetitionCount: Int
+    ): Pair<Long, Long> {
+        val ONE_MONTH = 30L * 24 * 60 * 60 * 1000
+        val now = System.currentTimeMillis()
+
+        val newInterval = when {
+            repetitionCount == 0 -> when (rating) {
+                0 -> 15L * 60 * 1000
+                1 -> 1L * 60 * 60 * 1000
+                2 -> 4L * 60 * 60 * 1000
+                3 -> 8L * 60 * 60 * 1000
+                4 -> 16L * 60 * 60 * 1000
+                5 -> 24L * 60 * 60 * 1000
+                else -> 24L * 60 * 60 * 1000
+            }
+
+            else -> when (rating) {
+                0 -> 15L * 60 * 1000
+                1 -> (currentInterval * 0.5).toLong()
+                2 -> currentInterval
+                3 -> (currentInterval * 1.2 * eFactor).toLong()
+                4 -> (currentInterval * 1.5 * eFactor).toLong()
+                5 -> (currentInterval * 2.0 * eFactor).toLong()
+                else -> currentInterval
+            }.coerceAtMost(ONE_MONTH)
+        }
+
+        val nextReview = now + newInterval
+        return Pair(newInterval, nextReview)
+    }
+
+    private fun scheduleNotification(
+        context: Context,
+        cardId: Long,
+        deckId: Long,
+        question: String,
+        isBuiltIn: Boolean,
+        nextReview: Long
+    ) {
+        if (nextReview <= System.currentTimeMillis()) return
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, CardNotificationReceiver::class.java).apply {
+            putExtra("card_id", cardId)
+            putExtra("deck_id", deckId)
+            putExtra("card_question", question)
+            putExtra("IS_BUILT_IN", isBuiltIn)
+        }
+
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            cardId.hashCode(),
+            intent,
+            flags
+        )
+
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextReview,
+                pendingIntent
+            )
+        } catch (_: Exception) {}
+    }
+
     private fun showRatingDialog() {
         val currentCard = cards.getOrNull(currentPosition) ?: return
         val ratingsWithDescriptions = arrayOf(
@@ -295,27 +393,55 @@ class BuiltInCardsActivity : AppCompatActivity() {
                             try {
                                 saveCardSolved()
 
-                                val multipliers = resources.getIntArray(R.array.interval_multipliers)
+                                val currentProgress = db.userProgressDao().getByCardId(currentCard.id)
+                                    ?: UserProgress(
+                                        cardId = currentCard.id,
+                                        interval = 0,
+                                        nextReview = 0,
+                                        eFactor = 2.5,
+                                        repetitionCount = 0
+                                    )
 
-                                val newEFactor = currentCard.updateEFactor(which)
-                                val newInterval = currentCard.calculateNewInterval(
+                                // Обновляем eFactor
+                                val newEFactor = updateEFactor(
+                                    currentEFactor = currentProgress.eFactor,
+                                    rating = which
+                                )
+
+                                // Рассчитываем новый интервал
+                                val (newInterval, nextReview) = calculateNextReview(
                                     rating = which,
-                                    multipliers = multipliers
-                                )
-                                val newNextReview = System.currentTimeMillis() + newInterval
-
-                                val progress = UserProgress(
-                                    cardId = currentCard.id,
-                                    interval = newInterval,
-                                    nextReview = newNextReview,
+                                    currentInterval = currentProgress.interval,
                                     eFactor = newEFactor,
-                                    repetitionCount = currentCard.repetitionCount + 1
+                                    repetitionCount = currentProgress.repetitionCount
                                 )
-                                db.userProgressDao().upsert(progress)
+
+                                // Создаем обновленный прогресс
+                                val newProgress = currentProgress.copy(
+                                    interval = newInterval,
+                                    nextReview = nextReview,
+                                    eFactor = newEFactor,
+                                    repetitionCount = currentProgress.repetitionCount + 1
+                                )
+
+                                // Сохраняем прогресс
+                                db.userProgressDao().upsert(newProgress)
+
+                                // Планируем уведомление
+                                scheduleNotification(
+                                    context = this@BuiltInCardsActivity,
+                                    cardId = currentCard.id,
+                                    deckId = currentCard.deckId,
+                                    question = currentCard.question,
+                                    isBuiltIn = currentCard.isBuiltIn,
+                                    nextReview = nextReview
+                                )
+
+                                // Обновляем список карточек
                                 loadCardsForDeck(currentCard.deckId)
-                                currentCard.scheduleNotification(this@BuiltInCardsActivity)
 
                                 withContext(Dispatchers.Main) {
+                                    // Фильтруем текущую карточку из списка
                                     cards = cards.filterIndexed { i, _ -> i != currentPosition }
                                     currentPosition = currentPosition.coerceAtMost(cards.size - 1)
 
@@ -353,7 +479,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
             }
             .show()
     }
-
     private fun loadCardsForDeck(deckId: Long) {
         lifecycleScope.launch {
             try {
@@ -380,6 +505,14 @@ class BuiltInCardsActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         this@BuiltInCardsActivity.cards = filteredCards
                         showingQuestion = true
+
+                        if (pendingCardId != -1L) {
+                            val position = filteredCards.indexOfFirst { it.id == pendingCardId }
+                            currentPosition = if (position != -1) position else 0
+                            pendingCardId = -1L
+                        } else {
+                            currentPosition = 0
+                        }
                         updateCardDisplay()
                     }
                 } else {
@@ -444,59 +577,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
             }
         }
     }
-    /*private fun archiveCurrentCard() {
-        if (cards.isEmpty() || currentPosition !in cards.indices) {
-            Toast.makeText(this, "Нет карточек для архивирования", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val currentCard = cards[currentPosition]
-        val currentDeckId = currentDeck?.id ?: run {
-            Toast.makeText(this, "Ошибка: колода не выбрана", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                db.cardDao().archiveCard(currentCard.id)
-            }
-            val updatedCards = withContext(Dispatchers.IO) {
-                db.cardDao().getCardsByDeckSync(currentDeckId)
-            }
-            withContext(Dispatchers.Main) {
-                cards = updatedCards
-
-                currentPosition = when {
-                    updatedCards.isEmpty() -> -1
-                    currentPosition >= updatedCards.size -> updatedCards.size - 1
-                    else -> currentPosition
-                }
-
-                updateCardDisplay()
-
-                if (updatedCards.isEmpty()) {
-                    AlertDialog.Builder(this@BuiltInCardsActivity)
-                        .setTitle("Колода архивирована")
-                        .setMessage("Все карточки перемещены в архив")
-                        .setPositiveButton("OK") { _, _ ->
-                            binding.cardsContainer.visibility = View.GONE
-                            binding.decksRecyclerView.visibility = View.VISIBLE
-                            currentDeck = null
-                            currentPosition = 0
-                            loadDecks()
-                        }
-                        .setCancelable(false)
-                        .show()
-                } else {
-                    Toast.makeText(
-                        this@BuiltInCardsActivity,
-                        "Карточка архивирована",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-    }*/
 
     private fun updateCardOnServer(card: Card) {
         lifecycleScope.launch {

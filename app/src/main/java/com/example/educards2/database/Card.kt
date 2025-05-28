@@ -100,16 +100,4 @@ data class Card(
     fun isDue(serverTimeMillis: Long): Boolean {
         return nextReview <= serverTimeMillis
     }
-    fun calculateNewInterval(rating: Int, multipliers: IntArray): Long {
-        val multiplier = when {
-            rating < multipliers.size -> multipliers[rating] / 100.0
-            else -> 1.0
-        }
-
-        return if (repetitionCount == 0) {
-            24 * 60 * 60 * 1000L
-        } else {
-            (currentInterval * multiplier).toLong()
-        }
-    }
 }
