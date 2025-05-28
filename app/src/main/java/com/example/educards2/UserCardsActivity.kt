@@ -305,7 +305,14 @@ class UserCardsActivity : AppCompatActivity() {
                                currentPosition = 0
                                updateCardDisplay()
                                binding.cardView.alpha = 1f
-
+                               val ratingDescription = ratingsWithDescriptions[selectedRating]
+                               val intervalDays = currentCard.currentInterval / (24 * 60 * 60 * 1000) // Переводим в дни
+                               val toastMessage = "Оценка: $ratingDescription, Интервал повторения: $intervalDays дней"
+                               Toast.makeText(
+                                   this@UserCardsActivity,
+                                   toastMessage,
+                                   Toast.LENGTH_LONG
+                               ).show()
                                if (newCards.isEmpty()) {
                                    Toast.makeText(
                                        this@UserCardsActivity,
