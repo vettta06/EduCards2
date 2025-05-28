@@ -555,6 +555,11 @@ class BuiltInCardsActivity : AppCompatActivity() {
                 apiService.archiveCard(currentCard.id)
                 cards = cards.filter { it.id != currentCard.id }
                 updateCardDisplay()
+                Toast.makeText(
+                    this@BuiltInCardsActivity,
+                    "Карточка архивирована",
+                    Toast.LENGTH_SHORT
+                ).show()
             } catch (e: Exception) {
                 showError("Ошибка архивирования: ${e.message}")
             }

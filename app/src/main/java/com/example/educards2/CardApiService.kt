@@ -10,6 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PUT
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
@@ -24,7 +25,7 @@ interface CardApiService {
         @Query("showArchived") showArchived: Boolean = false
     ): Response<List<Card>>
 
-    @PUT("/api/cards/{cardId}/archive")
+    @POST("/api/cards/{cardId}/archive")
     suspend fun archiveCard(@Path("cardId") cardId: Long)
 
 
