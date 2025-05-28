@@ -363,12 +363,15 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         lifecycleScope.launch(Dispatchers.IO) {
                             try {
                                 saveCardSolved()
+                                val oldInterval = currentCard.currentInterval
                                 val updatedCard = currentCard.apply {
                                     rating = which
                                     updateEFactor(which)
                                     updateIntervals(which, this@BuiltInCardsActivity)
                                 }
+                                val intervalText = formatIntervalDuration(updatedCard.currentInterval)
                                 updateCardOnServer(updatedCard)
+
                                 val serverTimeMillis = getServerTime() ?: run {
                                     withContext(Dispatchers.Main) {
                                         showError("Не удалось получить время с сервера")
@@ -387,9 +390,11 @@ class BuiltInCardsActivity : AppCompatActivity() {
                                     }
                                     return@launch
                                 }
+
                                 val updatedCards = response.body()?.filter {
                                     !it.isArchived && it.isDue(serverTimeMillis)
                                 } ?: emptyList()
+
                                 withContext(Dispatchers.Main) {
                                     cards = updatedCards
 
@@ -411,6 +416,12 @@ class BuiltInCardsActivity : AppCompatActivity() {
 
                                     updateCardDisplay()
                                     binding.cardView.alpha = 1f
+                                    Toast.makeText(
+                                        this@BuiltInCardsActivity,
+                                        "Оценка: $which\n" +
+                                                "Интервал: $intervalText",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {
@@ -429,16 +440,7 @@ class BuiltInCardsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions(
-                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                1001
-            )
-        }
-    }
-    private fun formatInterval(card: Card): String {
-        val intervalMillis = card.currentInterval
+    private fun formatIntervalDuration(intervalMillis: Long): String {
         if (intervalMillis <= 0) return "сразу"
 
         val minutes = TimeUnit.MILLISECONDS.toMinutes(intervalMillis)
@@ -452,6 +454,16 @@ class BuiltInCardsActivity : AppCompatActivity() {
             else -> "менее минуты"
         }
     }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                1001
+            )
+        }
+    }
+
     private fun pluralDays(n: Int) = when {
         n % 10 == 1 && n % 100 != 11 -> "день"
         n % 10 in 2..4 && n % 100 !in 12..14 -> "дня"
