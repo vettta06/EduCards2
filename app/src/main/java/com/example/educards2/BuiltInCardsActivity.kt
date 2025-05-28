@@ -216,7 +216,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
             btnPrev.setOnClickListener { showPreviousCard() }
             btnNext.setOnClickListener { showNextCard() }
             cardView.setOnClickListener { flipCard() }
-            btnArchive.setOnClickListener { archiveCurrentCard() }
             binding.btnBackToDecks.setOnClickListener {
                 binding.cardsContainer.visibility = View.GONE
                 binding.decksRecyclerView.visibility = View.VISIBLE
@@ -322,7 +321,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
                 )
                 btnPrev.isEnabled = false
                 btnNext.isEnabled = false
-                btnArchive.isEnabled = false
                 return
             }
 
@@ -547,31 +545,15 @@ class BuiltInCardsActivity : AppCompatActivity() {
             }
         }
     }*/
-    private fun archiveCurrentCard() {
-        val currentCard = cards.getOrNull(currentPosition) ?: return
 
-        lifecycleScope.launch {
-            try {
-                apiService.archiveCard(currentCard.id)
-                cards = cards.filter { it.id != currentCard.id }
-                updateCardDisplay()
-                Toast.makeText(
-                    this@BuiltInCardsActivity,
-                    "Карточка архивирована",
-                    Toast.LENGTH_SHORT
-                ).show()
-            } catch (e: Exception) {
-                showError("Ошибка архивирования: ${e.message}")
-            }
-        }
-    }
     private fun updateCardOnServer(card: Card) {
         lifecycleScope.launch {
             try {
                 apiService.updateCard(card.id, card)
             } catch (e: Exception) {
-                showError("Ошибка обновления: ${e.message}")
+                Log.e("CardUpdate", "Ошибка обновления: ${e.message}")
             }
         }
     }
+
 }

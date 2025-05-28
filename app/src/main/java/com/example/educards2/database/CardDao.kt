@@ -42,7 +42,8 @@ interface CardDao {
 
     @Query("SELECT COUNT(*) FROM cards WHERE deckId = :deckId AND isArchived = 0")
     suspend fun getTotalCardsInDeck(deckId: Long): Int
-
+    @Query("SELECT * FROM cards WHERE isArchived = 1")
+    suspend fun getArchivedCardsSync(): List<Card>
     @Query("SELECT COUNT(*) FROM cards WHERE deckId = :deckId AND nextReview <= :nowTimestamp")
     suspend fun getDueCardsCount(deckId: Long, nowTimestamp: Long = System.currentTimeMillis()): Int
 
