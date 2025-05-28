@@ -266,18 +266,18 @@ class UserCardsActivity : AppCompatActivity() {
 
    private fun showRatingDialog() {
        val currentCard = cards.getOrNull(currentPosition) ?: return
-       val ratings = arrayOf("0", "1", "2", "3", "4", "5")
-       val ratingDescriptions = arrayOf(
-           "Совсем забыл(а)",
-           "Неправильный ответ, правильный вспомнился с трудом",
-           "Неправильный ответ, правильный вспомнился легко",
-           "Правильный ответ после длительного размышления",
-           "Правильный ответ после небольшой заминки",
-           "Идеальный ответ"
+       val ratingsWithDescriptions = arrayOf(
+           "0 - Совсем забыл(а)",
+           "1 - Неправильный ответ, правильный вспомнился с трудом",
+           "2 - Неправильный ответ, правильный вспомнился легко",
+           "3 - Правильный ответ после длительного размышления",
+           "4 - Правильный ответ после небольшой заминки",
+           "5 - Идеальный ответ"
        )
+
        AlertDialog.Builder(this)
            .setTitle("Оцените свой ответ")
-           .setItems(ratings) { _, which ->
+           .setItems(ratingsWithDescriptions) { _, which ->
                val selectedRating = which
                binding.cardView.animate()
                    .alpha(0f)
@@ -285,6 +285,8 @@ class UserCardsActivity : AppCompatActivity() {
                    .withEndAction {
                        lifecycleScope.launch(Dispatchers.IO) {
                            saveCardSolved()
+                           val oldInterval = currentCard.currentInterval
+
                            currentCard.apply {
                                rating = selectedRating
                                updateEFactor(selectedRating)
@@ -297,6 +299,7 @@ class UserCardsActivity : AppCompatActivity() {
                                .filter { !it.isArchived }
                                .filter { it.isDue() }
 
+                           val intervalText = formatIntervalDuration(currentCard.currentInterval)
                            val newCards = updatedCards.filterNot { it.id == currentCard.id }
 
                            withContext(Dispatchers.Main) {
@@ -305,13 +308,12 @@ class UserCardsActivity : AppCompatActivity() {
                                currentPosition = 0
                                updateCardDisplay()
                                binding.cardView.alpha = 1f
-                               val intervalDays = currentCard.currentInterval / (24 * 60 * 60 * 1000) // Переводим в дни
-                               val toastMessage = "Оценка: ${ratings[selectedRating]}, Интервал повторения: $intervalDays дней"
                                Toast.makeText(
                                    this@UserCardsActivity,
-                                   toastMessage,
+                                   "Оценка: $selectedRating\n" + "Интервал повторения: $intervalText",
                                    Toast.LENGTH_LONG
                                ).show()
+
                                if (newCards.isEmpty()) {
                                    Toast.makeText(
                                        this@UserCardsActivity,
@@ -367,8 +369,7 @@ class UserCardsActivity : AppCompatActivity() {
             cardView.invalidate()
         }
     }
-    private fun formatInterval(card: Card): String {
-        val intervalMillis = card.currentInterval
+    private fun formatIntervalDuration(intervalMillis: Long): String {
         if (intervalMillis <= 0) return "сразу"
 
         val minutes = TimeUnit.MILLISECONDS.toMinutes(intervalMillis)
