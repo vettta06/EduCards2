@@ -25,12 +25,13 @@ data class Card(
     var eFactor: Double = 2.5,
     var currentInterval: Long = 0,
     val isBuiltIn: Boolean = false,
-    var isArchived: Boolean = false
+    var isArchived: Boolean = false,
+    val repetitionCount: Int = 0
 ) {
 
-    fun updateEFactor(q: Int) {
+    fun updateEFactor(q: Int): Double {
         val delta = 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)
-        eFactor = (eFactor + delta).coerceIn(1.3, 2.5)
+        return (eFactor + delta).coerceIn(1.3, 2.5)
     }
 
     fun updateIntervals(q: Int, context: Context) {
@@ -93,11 +94,22 @@ data class Card(
             )
         } catch (_: Exception) {}
     }
-    fun isDue(serverTimeMillis: Long): Boolean {
-        return nextReview <= serverTimeMillis
-    }
     fun isDue(): Boolean {
         return nextReview <= System.currentTimeMillis()
     }
+    fun isDue(serverTimeMillis: Long): Boolean {
+        return nextReview <= serverTimeMillis
+    }
+    fun calculateNewInterval(rating: Int, multipliers: IntArray): Long {
+        val multiplier = when {
+            rating < multipliers.size -> multipliers[rating] / 100.0
+            else -> 1.0
+        }
 
+        return if (repetitionCount == 0) {
+            24 * 60 * 60 * 1000L
+        } else {
+            (currentInterval * multiplier).toLong()
+        }
+    }
 }

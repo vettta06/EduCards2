@@ -16,6 +16,7 @@ import com.example.educards2.Stats.StreakManager
 import com.example.educards2.database.AppDatabase
 import com.example.educards2.database.Deck
 import com.example.educards2.database.Stats
+import com.example.educards2.database.UserProgress
 import com.example.educards2.databinding.ActivityBuiltInCardsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -106,17 +107,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
         }
     }
 
-    /*private fun loadDecks() {
-        lifecycleScope.launch {
-            db.deckDao().getAllBuiltInDecks()
-                .collect { decks ->
-                    if (decks.isEmpty()) {
-                        return@collect
-                    }
-                    deckAdapter.submitList(decks)
-                }
-        }
-    }*/
     private fun loadDecks() {
         lifecycleScope.launch {
             try {
@@ -133,33 +123,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
         }
     }
 
-   /* private fun loadCardsForDeck(deckId: Long) {
-
-        lifecycleScope.launch {
-            db.cardDao().getDueCardsByDeck(deckId).collect { loadedCards ->
-                this@BuiltInCardsActivity.cards = loadedCards
-                if (intent.hasExtra("CARD_ID") && currentPosition == -1 && cards.isNotEmpty()) {
-                    currentPosition = 0
-                }
-                currentDeck?.let {
-                    withContext(Dispatchers.Main) {
-                        tvDeckTitle.text = it.name
-                    }
-                }
-                currentPosition = when {
-                    cards.isEmpty() -> -1
-                    currentPosition >= cards.size -> cards.size - 1
-                    else -> currentPosition.coerceIn(0, cards.size - 1)
-                }
-
-                withContext(Dispatchers.Main) {
-                    setupClickListeners()
-                    requestNotificationPermission()
-                    updateCardDisplay()
-                }
-            }
-        }
-    }*/
    suspend fun getServerTime(): Long? {
        return withContext(Dispatchers.IO) {
            try {
@@ -173,35 +136,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
            } catch (e: IOException) {
                Log.e("Card", "Network error getting server time: ${e.message}")
                null
-           }
-       }
-   }
-   private fun loadCardsForDeck(deckId: Long) {
-       lifecycleScope.launch {
-           try {
-               val response = apiService.getCards(deckId)
-               if (response.isSuccessful) {
-                   val cards = response.body() ?: emptyList()
-                   Log.d("CardsActivity", "Received ${cards.size} cards from server")
-                   val serverTimeMillis = getServerTime()
-                   if (serverTimeMillis == null) {
-                       showError("Не удалось получить время с сервера")
-                       return@launch
-                   }
-                   val filteredCards = cards.filter {
-                       !it.isArchived && it.isDue(serverTimeMillis)
-                   }
-                   Log.d("CardsActivity", "Filtered ${filteredCards.size} cards after filtering")
-
-                   withContext(Dispatchers.Main) {
-                       this@BuiltInCardsActivity.cards = filteredCards
-                       updateCardDisplay()
-                   }
-               } else {
-                   showError("Ошибка загрузки карточек: ${response.code()}")
-               }
-           } catch (e: Exception) {
-               showError("Ошибка сети: ${e.message}")
            }
        }
    }
@@ -339,7 +273,6 @@ class BuiltInCardsActivity : AppCompatActivity() {
             btnNext.isEnabled = currentPosition < cards.size - 1
         }
     }
-
     private fun showRatingDialog() {
         val currentCard = cards.getOrNull(currentPosition) ?: return
         val ratingsWithDescriptions = arrayOf(
@@ -361,65 +294,48 @@ class BuiltInCardsActivity : AppCompatActivity() {
                         lifecycleScope.launch(Dispatchers.IO) {
                             try {
                                 saveCardSolved()
-                                val oldInterval = currentCard.currentInterval
-                                val updatedCard = currentCard.apply {
-                                    rating = which
-                                    updateEFactor(which)
-                                    updateIntervals(which, this@BuiltInCardsActivity)
-                                }
-                                val intervalText = formatIntervalDuration(updatedCard.currentInterval)
-                                updateCardOnServer(updatedCard)
 
-                                val serverTimeMillis = getServerTime() ?: run {
-                                    withContext(Dispatchers.Main) {
-                                        showError("Не удалось получить время с сервера")
-                                        binding.cardView.alpha = 1f
-                                    }
-                                    return@launch
-                                }
+                                val multipliers = resources.getIntArray(R.array.interval_multipliers)
 
-                                val deckId = currentDeck?.id ?: return@launch
-                                val response = apiService.getCards(deckId)
+                                val newEFactor = currentCard.updateEFactor(which)
+                                val newInterval = currentCard.calculateNewInterval(
+                                    rating = which,
+                                    multipliers = multipliers
+                                )
+                                val newNextReview = System.currentTimeMillis() + newInterval
 
-                                if (!response.isSuccessful) {
-                                    withContext(Dispatchers.Main) {
-                                        showError("Ошибка загрузки карточек: ${response.code()}")
-                                        binding.cardView.alpha = 1f
-                                    }
-                                    return@launch
-                                }
-
-                                val updatedCards = response.body()?.filter {
-                                    !it.isArchived && it.isDue(serverTimeMillis)
-                                } ?: emptyList()
+                                val progress = UserProgress(
+                                    cardId = currentCard.id,
+                                    interval = newInterval,
+                                    nextReview = newNextReview,
+                                    eFactor = newEFactor,
+                                    repetitionCount = currentCard.repetitionCount + 1
+                                )
+                                db.userProgressDao().upsert(progress)
+                                loadCardsForDeck(currentCard.deckId)
+                                currentCard.scheduleNotification(this@BuiltInCardsActivity)
 
                                 withContext(Dispatchers.Main) {
-                                    cards = updatedCards
+                                    cards = cards.filterIndexed { i, _ -> i != currentPosition }
+                                    currentPosition = currentPosition.coerceAtMost(cards.size - 1)
 
-                                    currentPosition = when {
-                                        updatedCards.isEmpty() -> -1
-                                        currentPosition >= updatedCards.size -> updatedCards.size - 1
-                                        else -> currentPosition
-                                    }
+                                    val intervalText = formatIntervalDuration(newInterval)
+                                    Toast.makeText(
+                                        this@BuiltInCardsActivity,
+                                        "Оценка: $which\nИнтервал: $intervalText",
+                                        Toast.LENGTH_LONG
+                                    ).show()
 
-                                    showingQuestion = true
+                                    updateCardDisplay()
+                                    binding.cardView.alpha = 1f
 
-                                    if (updatedCards.isEmpty()) {
+                                    if (cards.isEmpty()) {
                                         Toast.makeText(
                                             this@BuiltInCardsActivity,
                                             "Все карточки пройдены!",
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
-
-                                    updateCardDisplay()
-                                    binding.cardView.alpha = 1f
-                                    Toast.makeText(
-                                        this@BuiltInCardsActivity,
-                                        "Оценка: $which\n" +
-                                                "Интервал: $intervalText",
-                                        Toast.LENGTH_LONG
-                                    ).show()
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {
@@ -438,6 +354,42 @@ class BuiltInCardsActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun loadCardsForDeck(deckId: Long) {
+        lifecycleScope.launch {
+            try {
+                val response = apiService.getCards(deckId)
+                if (response.isSuccessful) {
+                    val serverCards = response.body() ?: emptyList()
+
+                    val userProgress = db.userProgressDao().getAll().associateBy { it.cardId }
+
+                    val mergedCards = serverCards.map { card ->
+                        userProgress[card.id]?.let { progress ->
+                            card.copy(
+                                currentInterval = progress.interval,
+                                nextReview = progress.nextReview,
+                                eFactor = progress.eFactor,
+                                repetitionCount = progress.repetitionCount
+                            )
+                        } ?: card
+                    }
+
+                    val now = System.currentTimeMillis()
+                    val filteredCards = mergedCards.filter { it.isDue(now) }
+
+                    withContext(Dispatchers.Main) {
+                        this@BuiltInCardsActivity.cards = filteredCards
+                        showingQuestion = true
+                        updateCardDisplay()
+                    }
+                } else {
+                    showError("Ошибка загрузки карточек: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                showError("Ошибка сети: ${e.message}")
+            }
+        }
+    }
     private fun formatIntervalDuration(intervalMillis: Long): String {
         if (intervalMillis <= 0) return "сразу"
 
